@@ -1,8 +1,11 @@
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../src/components/primitives/Card';
+import { GradientText } from '../../src/components/primitives/GradientText';
 import { MonoText } from '../../src/components/primitives/MonoText';
 import { Pill } from '../../src/components/primitives/Pill';
+import { ProgressBar } from '../../src/components/primitives/ProgressBar';
+import { Sparkline } from '../../src/components/primitives/Sparkline';
 import { UIText } from '../../src/components/primitives/UIText';
 import { colors } from '../../src/tokens/colors';
 import { spacing } from '../../src/tokens/spacing';
@@ -12,6 +15,40 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: spacing.screenPadH, gap: spacing.xxl }}>
         <UIText variant="display">Primitives sandbox</UIText>
+
+        <View style={{ gap: spacing.sm }}>
+          <UIText variant="micro" color="sub">
+            PROGRESS BARS
+          </UIText>
+          <ProgressBar pct={28} color="brand" />
+          <ProgressBar pct={72} color="ember" bgColor="emberLight" />
+          <ProgressBar pct={100} color="forest" height={10} radius={5} />
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
+          <UIText variant="micro" color="sub">
+            SPARKLINES
+          </UIText>
+          <View style={{ flexDirection: 'row', gap: spacing.lg, alignItems: 'center' }}>
+            <Sparkline data={[2, 4, 1, 6, 3, 0, 5]} color="violet" />
+            <Sparkline data={[0, 0, 3, 2, 5, 4, 1]} color="ocean" />
+            <Sparkline data={[1, 1, 1, 1, 1, 1, 1]} color="forest" />
+            <Sparkline data={[0, 0, 0, 0, 0, 0, 0]} color="muted" />
+          </View>
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
+          <UIText variant="micro" color="sub">
+            GRADIENT TEXT
+          </UIText>
+          <GradientText
+            gradient="celebration"
+            variant="display"
+            style={{ fontSize: 34, letterSpacing: -1 }}
+          >
+            Actually enjoy it.
+          </GradientText>
+        </View>
 
         <View style={{ gap: spacing.md }}>
           <UIText variant="micro" color="sub">
@@ -95,6 +132,7 @@ export default function HomeScreen() {
             </View>
           </Card>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
