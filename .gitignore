@@ -39,5 +39,9 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
+# /ios — committed to track Swift edits for Dynamic Island widget
+/ios/Pods
+/ios/build
+/ios/*.xcworkspace/xcuserdata
+/ios/*.xcodeproj/xcuserdata
 /android
