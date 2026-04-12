@@ -1,16 +1,18 @@
 {
   "expo": {
-    "name": "timer-app",
-    "slug": "timer-app",
+    "name": "arc",
+    "slug": "arc",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "timerapp",
+    "scheme": "arc",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.simonstancovich.timertracker"
+      "bundleIdentifier": "com.simonstancovich.arc",
+      "buildNumber": "1",
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +22,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "output": "static",
@@ -44,6 +49,16 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6f156b70-0df5-476f-ad9a-25469f8e40be"
+      }
+    },
+    "owner": "simonmstancovich",
+    "updates": {
+      "url": "https://u.expo.dev/6f156b70-0df5-476f-ad9a-25469f8e40be"
     }
   }
 }

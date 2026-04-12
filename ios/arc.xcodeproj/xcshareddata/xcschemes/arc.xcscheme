@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "timerapp.app"
-               BlueprintName = "timerapp"
-               ReferencedContainer = "container:timerapp.xcodeproj">
+               BuildableName = "arc.app"
+               BlueprintName = "arc"
+               ReferencedContainer = "container:arc.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "timerappTests.xctest"
-               BlueprintName = "timerappTests"
-               ReferencedContainer = "container:timerapp.xcodeproj">
+               BuildableName = "arcTests.xctest"
+               BlueprintName = "arcTests"
+               ReferencedContainer = "container:arc.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "timerapp.app"
-            BlueprintName = "timerapp"
-            ReferencedContainer = "container:timerapp.xcodeproj">
+            BuildableName = "arc.app"
+            BlueprintName = "arc"
+            ReferencedContainer = "container:arc.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "timerapp.app"
-            BlueprintName = "timerapp"
-            ReferencedContainer = "container:timerapp.xcodeproj">
+            BuildableName = "arc.app"
+            BlueprintName = "arc"
+            ReferencedContainer = "container:arc.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
