@@ -26,3 +26,7 @@ export const colors = {
 
   celebGrad: ['#5244E8', '#9D174D', '#C2410C'],
 } as const;
+
+export type ColorToken = {
+  [K in keyof typeof colors]: (typeof colors)[K] extends string ? K : never;
+}[keyof typeof colors];
