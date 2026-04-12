@@ -13,7 +13,7 @@ interface Store extends AppState {
   addPastSession: (
     projectId: string,
     durationMinutes: number,
-    startedAt: Date,
+    startedAt: string,
     note?: string,
   ) => void;
 
@@ -76,7 +76,7 @@ export const useStore = create<Store>()(
       name: 'timetracker',
       version: STORE_VERSION,
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
+      partialize: (state): AppState => ({
         projects: state.projects,
         sessions: state.sessions,
         activeSessionId: state.activeSessionId,

@@ -24,7 +24,5 @@ export const colors = {
   streakBg: '#FFF3E0',
   streakText: '#D97706',
 
-  celebGrad: ['#5244E8', '#9D174D', '#C2410C'] as const,
+  celebGrad: ['#5244E8', '#9D174D', '#C2410C'],
 } as const;
-
-export type ProjectColorKey = 'violet' | 'ocean' | 'ember' | 'forest' | 'rose' | 'amber' | 'teal';
