@@ -42,6 +42,7 @@ export const colors = {
   tealDark: '#067980',
 
   streakBg: '#FFF3E0',
+  streakBorder: '#FFCC8055',
   streakText: '#D97706',
 } as const;
 

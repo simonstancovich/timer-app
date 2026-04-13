@@ -9,6 +9,19 @@ export type PresetProjectColor =
 
 export type ProjectColor = PresetProjectColor | 'custom';
 
+const PRESET_PROJECT_COLORS: readonly PresetProjectColor[] = [
+  'violet',
+  'ocean',
+  'ember',
+  'forest',
+  'rose',
+  'amber',
+  'teal',
+];
+
+export const isPresetProjectColor = (c: string): c is PresetProjectColor =>
+  (PRESET_PROJECT_COLORS as readonly string[]).includes(c);
+
 export interface Project {
   id: string;
   name: string;
@@ -39,7 +52,6 @@ export interface AppState {
   projects: Project[];
   sessions: Session[];
   activeSessionId: string | null;
-  streak: number;
   dailyGoalMinutes: number;
   onboardingDone: boolean;
 }

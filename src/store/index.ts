@@ -28,13 +28,10 @@ interface Store extends AppState {
   setOnboardingDone: (done: boolean) => void;
 
   getActiveProject: () => Project | null;
-  getTodaySessions: () => Session[];
-  getTodayMinutes: () => number;
-  getWeekMinutes: () => number;
-  getProjectWeekMinutes: (projectId: string) => number;
 }
 
 const DEFAULT_WEEKLY_GOAL_MINUTES = 40 * 60;
+const DEFAULT_DAILY_GOAL_MINUTES = 9 * 60;
 
 const newProjectId = () =>
   `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -43,8 +40,7 @@ const initialState: AppState = {
   projects: [],
   sessions: [],
   activeSessionId: null,
-  streak: 0,
-  dailyGoalMinutes: 540,
+  dailyGoalMinutes: DEFAULT_DAILY_GOAL_MINUTES,
   onboardingDone: false,
 };
 
@@ -95,10 +91,6 @@ export const useStore = create<Store>()(
         if (!session) return null;
         return projects.find((p) => p.id === session.projectId) ?? null;
       },
-      getTodaySessions: () => [],
-      getTodayMinutes: () => 0,
-      getWeekMinutes: () => 0,
-      getProjectWeekMinutes: () => 0,
     }),
     {
       name: 'timetracker',
@@ -108,16 +100,10 @@ export const useStore = create<Store>()(
         projects: state.projects,
         sessions: state.sessions,
         activeSessionId: state.activeSessionId,
-        streak: state.streak,
         dailyGoalMinutes: state.dailyGoalMinutes,
         onboardingDone: state.onboardingDone,
       }),
-      migrate: (persistedState, version) => {
-        if (version < STORE_VERSION) {
-          // future migrations land here
-        }
-        return persistedState as AppState;
-      },
+      migrate: (persistedState) => persistedState as AppState,
     },
   ),
 );

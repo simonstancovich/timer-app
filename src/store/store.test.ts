@@ -7,7 +7,12 @@ import { useStore } from './index';
 const initialSnapshot = useStore.getState();
 
 beforeEach(() => {
-  useStore.setState({ ...initialSnapshot, projects: [], onboardingDone: false });
+  useStore.setState({
+    ...initialSnapshot,
+    projects: [],
+    sessions: [],
+    onboardingDone: false,
+  });
 });
 
 describe('store.createProject', () => {
