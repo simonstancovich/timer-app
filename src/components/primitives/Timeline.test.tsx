@@ -127,6 +127,25 @@ describe('Timeline', () => {
     expect(flattenStyle(getByTestId('tl').props.style).marginTop).toBe(12);
   });
 
+  it('replaces project colors with white tints when onDarkBg is set', () => {
+    const { UNSAFE_getAllByType, getByTestId } = render(
+      <Timeline testID="tl" sessions={sampleSessions} onDarkBg />,
+    );
+    fireLayout(getByTestId('tl'));
+    const views = UNSAFE_getAllByType(View);
+    const tintedBlocks = views.filter((v) => {
+      const bg = flattenStyle(v.props.style).backgroundColor;
+      return bg === 'rgba(255,255,255,0.35)';
+    });
+    expect(tintedBlocks).toHaveLength(2);
+
+    const projectColored = views.filter((v) => {
+      const bg = flattenStyle(v.props.style).backgroundColor;
+      return bg === colors.violet || bg === colors.ember;
+    });
+    expect(projectColored).toHaveLength(0);
+  });
+
   it('renders nothing session-shaped before layout has measured width', () => {
     const { UNSAFE_getAllByType } = render(<Timeline sessions={sampleSessions} />);
     const projectColored = UNSAFE_getAllByType(View).filter((v) => {

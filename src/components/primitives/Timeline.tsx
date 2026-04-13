@@ -34,7 +34,12 @@ export type TimelineSession = {
 type TimelineProps = Omit<ViewProps, 'children'> & {
   sessions: TimelineSession[];
   windowMinutes?: number;
+  onDarkBg?: boolean;
 };
+
+const DARK_BG_BLOCK_TINT = 'rgba(255,255,255,0.35)';
+const DARK_BG_STRIPE_TINT = 'rgba(255,255,255,0.55)';
+const DARK_BG_TRACK_TINT = 'rgba(255,255,255,0.12)';
 
 const BLOCK_HEIGHT = 24;
 const BLOCK_RADIUS = 5;
@@ -64,6 +69,7 @@ type BlockLayout = {
 export const Timeline = ({
   sessions,
   windowMinutes = 540,
+  onDarkBg = false,
   style,
   ...rest
 }: TimelineProps) => {
@@ -85,11 +91,13 @@ export const Timeline = ({
     }));
   }, [sessions, windowMinutes, containerWidth]);
 
+  const trackBg = onDarkBg ? DARK_BG_TRACK_TINT : colors.surf;
+
   return (
     <View {...rest} onLayout={handleLayout} style={[containerStyle, style]}>
-      <View style={trackStyle} />
+      <View style={[trackStyle, { backgroundColor: trackBg }]} />
       {layouts.map((layout, i) => (
-        <SessionBlock key={i} layout={layout} />
+        <SessionBlock key={i} layout={layout} onDarkBg={onDarkBg} />
       ))}
       {layouts.map((layout, i) =>
         layout.session.isLive ? <LiveDot key={`dot-${i}`} layout={layout} /> : null,
@@ -98,8 +106,18 @@ export const Timeline = ({
   );
 };
 
-const SessionBlock = ({ layout }: { layout: BlockLayout }) => {
+const SessionBlock = ({
+  layout,
+  onDarkBg,
+}: {
+  layout: BlockLayout;
+  onDarkBg: boolean;
+}) => {
   const { session, left, width } = layout;
+  const bg = onDarkBg ? DARK_BG_BLOCK_TINT : colors[session.color];
+  const stripe = onDarkBg
+    ? DARK_BG_STRIPE_TINT
+    : colors[projectColorToDark[session.color]];
   return (
     <View
       accessibilityLabel={session.label}
@@ -110,14 +128,14 @@ const SessionBlock = ({ layout }: { layout: BlockLayout }) => {
         width,
         height: BLOCK_HEIGHT,
         borderRadius: BLOCK_RADIUS,
-        backgroundColor: colors[session.color],
+        backgroundColor: bg,
         overflow: 'hidden',
       }}
     >
       <View
         style={{
           height: STRIPE_HEIGHT,
-          backgroundColor: colors[projectColorToDark[session.color]],
+          backgroundColor: stripe,
         }}
       />
     </View>
@@ -169,6 +187,5 @@ const containerStyle = {
 
 const trackStyle = {
   height: TRACK_HEIGHT,
-  backgroundColor: colors.surf,
   borderRadius: TRACK_HEIGHT / 2,
 } satisfies ViewStyle;

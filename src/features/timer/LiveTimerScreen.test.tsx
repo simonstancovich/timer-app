@@ -256,6 +256,15 @@ describe('LiveTimerScreen', () => {
     render(<LiveTimerScreen project={project} />);
     expect(mockNotificationAsync).toHaveBeenCalledTimes(2);
   });
+
+  it('renders a mini timeline with an accessibility label', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+
+    const { getByLabelText } = render(<LiveTimerScreen project={project} />);
+    expect(getByLabelText("Today's timeline")).toBeTruthy();
+  });
 });
 
 type AnyStyle = Record<string, unknown>;
