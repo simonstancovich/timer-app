@@ -50,9 +50,11 @@ const HomeScreen = () => {
   const hint = hasHistory ? undefined : "Let's get going →";
 
   const handleStart = useCallback((project: Project) => {
-    const { activeSessionId, startSession } = useStore.getState();
-    if (!activeSessionId) {
-      startSession(project.id);
+    const state = useStore.getState();
+    if (!state.activeSessionId) {
+      state.startSession(project.id);
+    } else if (state.activePausedAt) {
+      state.resumeSession();
     }
     router.push('/timer');
   }, []);

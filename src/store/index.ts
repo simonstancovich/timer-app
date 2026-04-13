@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AppState, Project, ProjectColor, Session } from '../types';
 
-const STORE_VERSION = 1;
+const STORE_VERSION = 2;
 
 interface Store extends AppState {
   startSession: (projectId: string, note?: string) => void;
@@ -101,6 +101,7 @@ export const useStore = create<Store>()(
           startedAt: new Date().toISOString(),
           endedAt: null,
           durationMinutes: 0,
+          durationSeconds: 0,
           note: note ?? '',
           isDeep: false,
           isPast: false,
@@ -150,12 +151,14 @@ export const useStore = create<Store>()(
           : 0;
         const totalPausedMs = activePausedAccumulatedMs + extraPausedMs;
         const elapsedMs = now.getTime() - new Date(existing.startedAt).getTime() - totalPausedMs;
+        const durationSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
         const durationMinutes = Math.max(0, Math.round(elapsedMs / 60000));
 
         const completed: Session = {
           ...existing,
           endedAt: now.toISOString(),
           durationMinutes,
+          durationSeconds,
           isDeep: durationMinutes >= DEEP_WORK_MINUTES,
         };
 
@@ -184,6 +187,7 @@ export const useStore = create<Store>()(
           startedAt: start.toISOString(),
           endedAt: end.toISOString(),
           durationMinutes: rounded,
+          durationSeconds: rounded * 60,
           note: note ?? '',
           isDeep: rounded >= DEEP_WORK_MINUTES,
           isPast: true,
@@ -240,7 +244,16 @@ export const useStore = create<Store>()(
         dailyGoalMinutes: state.dailyGoalMinutes,
         onboardingDone: state.onboardingDone,
       }),
-      migrate: (persistedState) => persistedState as AppState,
+      migrate: (persistedState, version) => {
+        const state = persistedState as AppState & { sessions?: Partial<Session>[] };
+        if (version < 2) {
+          state.sessions = (state.sessions ?? []).map((s) => ({
+            ...(s as Session),
+            durationSeconds: (s as Session).durationSeconds ?? (s.durationMinutes ?? 0) * 60,
+          }));
+        }
+        return state as AppState;
+      },
     },
   ),
 );

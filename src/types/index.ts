@@ -43,6 +43,7 @@ export interface Session {
   startedAt: string;
   endedAt: string | null;
   durationMinutes: number;
+  durationSeconds: number;
   note: string;
   isDeep: boolean;
   isPast: boolean;

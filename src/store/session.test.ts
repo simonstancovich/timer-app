@@ -122,6 +122,16 @@ describe('stopSession', () => {
     expect(completed!.endedAt).toBe('2026-04-13T10:45:00.000Z');
   });
 
+  it('stores second-level precision in durationSeconds', () => {
+    const project = createTestProject();
+    jest.setSystemTime(new Date('2026-04-13T10:00:00.000Z'));
+    useStore.getState().startSession(project.id);
+    jest.setSystemTime(new Date('2026-04-13T10:06:17.400Z'));
+    const completed = useStore.getState().stopSession();
+    expect(completed!.durationSeconds).toBe(377);
+    expect(completed!.durationMinutes).toBe(6);
+  });
+
   it('counts time paused at stop moment', () => {
     const project = createTestProject();
     jest.setSystemTime(new Date('2026-04-13T10:00:00Z'));
