@@ -11,8 +11,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.simonstancovich.arc",
-      "buildNumber": "1",
-      "runtimeVersion": "1.0.0"
+      "runtimeVersion": "1.0.0",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
