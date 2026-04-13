@@ -103,6 +103,21 @@ describe('LiveTimerScreen', () => {
     expect(useStore.getState().activeSessionId).toBeNull();
   });
 
+  it('uses dark foreground tokens on a mid-luminance color where ink has better contrast than white', () => {
+    const project: Project = {
+      ...makeProject(),
+      color: 'custom',
+      customColor: '#4CAF50',
+      customColorDark: '#4CAF50',
+    };
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+
+    const { getByText } = render(<LiveTimerScreen project={project} />);
+    const flat = flattenStyle(getByText('00:00:00').props.style);
+    expect(flat.color).toBe(colors.ink);
+  });
+
   it('uses dark foreground tokens when the project dark color is light-luminance', () => {
     const project: Project = {
       ...makeProject(),
@@ -158,6 +173,27 @@ describe('LiveTimerScreen', () => {
 
     const { getByText } = render(<LiveTimerScreen project={project} />);
     expect(getByText('00:00:00')).toBeTruthy();
+  });
+
+  it('updates the active session note as the user types', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+
+    const { getByLabelText } = render(<LiveTimerScreen project={project} />);
+    fireEvent.changeText(getByLabelText('Session note'), 'deposit flow');
+
+    const active = useStore.getState().sessions[0];
+    expect(active.note).toBe('deposit flow');
+  });
+
+  it('renders the existing session note as the input value', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id, 'prefilled');
+
+    const { getByLabelText } = render(<LiveTimerScreen project={project} />);
+    expect(getByLabelText('Session note').props.value).toBe('prefilled');
   });
 });
 
