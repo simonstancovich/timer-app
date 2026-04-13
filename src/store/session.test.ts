@@ -122,6 +122,16 @@ describe('stopSession', () => {
     expect(completed!.endedAt).toBe('2026-04-13T10:45:00.000Z');
   });
 
+  it('stores second-level precision in durationSeconds', () => {
+    const project = createTestProject();
+    jest.setSystemTime(new Date('2026-04-13T10:00:00.000Z'));
+    useStore.getState().startSession(project.id);
+    jest.setSystemTime(new Date('2026-04-13T10:06:17.400Z'));
+    const completed = useStore.getState().stopSession();
+    expect(completed!.durationSeconds).toBe(377);
+    expect(completed!.durationMinutes).toBe(6);
+  });
+
   it('counts time paused at stop moment', () => {
     const project = createTestProject();
     jest.setSystemTime(new Date('2026-04-13T10:00:00Z'));
@@ -193,6 +203,35 @@ describe('stopSession', () => {
     expect(activeSessionId).toBeNull();
     expect(activePausedAt).toBeNull();
     expect(activePausedAccumulatedMs).toBe(0);
+  });
+});
+
+describe('updateActiveSessionNote', () => {
+  it('updates the active session note without creating a new session', () => {
+    const project = createTestProject();
+    useStore.getState().startSession(project.id);
+    const idBefore = useStore.getState().sessions[0].id;
+
+    useStore.getState().updateActiveSessionNote('working on deposit flow');
+
+    const { sessions } = useStore.getState();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].id).toBe(idBefore);
+    expect(sessions[0].note).toBe('working on deposit flow');
+  });
+
+  it('is a no-op when no session is active', () => {
+    useStore.getState().updateActiveSessionNote('ignored');
+    expect(useStore.getState().sessions).toHaveLength(0);
+  });
+
+  it('persists onto the session when stopped', () => {
+    const project = createTestProject();
+    useStore.getState().startSession(project.id);
+    useStore.getState().updateActiveSessionNote('final note');
+    const stopped = useStore.getState().stopSession();
+    expect(stopped!.note).toBe('final note');
+    expect(useStore.getState().projects[0].lastNote).toBe('final note');
   });
 });
 
