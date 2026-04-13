@@ -24,13 +24,13 @@ type MonoTextProps = Omit<TextProps, 'children'> & {
   children: string;
 };
 
-export function MonoText({
+export const MonoText = ({
   size = 'md',
   color = 'ink',
   style,
   children,
   ...rest
-}: MonoTextProps) {
+}: MonoTextProps) => {
   const minScale = minFontScaleBySize[size];
   const canShrink = minScale < 1;
   return (
@@ -44,4 +44,4 @@ export function MonoText({
       {children}
     </Text>
   );
-}
+};

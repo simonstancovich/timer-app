@@ -23,7 +23,7 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+const RootLayout = () => {
   const colorScheme = useColorScheme();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -53,4 +53,6 @@ export default function RootLayout() {
       <StatusBar style="auto" />
     </ThemeProvider>
   );
-}
+};
+
+export default RootLayout;

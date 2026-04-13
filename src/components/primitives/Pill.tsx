@@ -9,7 +9,7 @@ type PillProps = Omit<ViewProps, 'children'> & {
   radius?: number;
 };
 
-export function Pill({ children, bg, radius = spacing.pillRadius, style, ...rest }: PillProps) {
+export const Pill = ({ children, bg, radius = spacing.pillRadius, style, ...rest }: PillProps) => {
   return (
     <View
       {...rest}
@@ -27,4 +27,4 @@ export function Pill({ children, bg, radius = spacing.pillRadius, style, ...rest
       {children}
     </View>
   );
-}
+};

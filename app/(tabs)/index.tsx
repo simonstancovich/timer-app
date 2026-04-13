@@ -10,7 +10,7 @@ import { UIText } from '../../src/components/primitives/UIText';
 import { colors } from '../../src/tokens/colors';
 import { spacing } from '../../src/tokens/spacing';
 
-export default function HomeScreen() {
+const HomeScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: spacing.screenPadH, gap: spacing.xxl }}>
@@ -136,4 +136,6 @@ export default function HomeScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
+
+export default HomeScreen;

@@ -13,7 +13,7 @@ const BAR_GAP = 2;
 const BAR_RADIUS = 1.5;
 const MIN_BAR_HEIGHT = 2;
 
-export function Sparkline({ data, color, width = 56, height = 18 }: SparklineProps) {
+export const Sparkline = ({ data, color, width = 56, height = 18 }: SparklineProps) => {
   const max = Math.max(...data, 0);
   const fill = colors[color];
   const maxBarHeight = Math.max(MIN_BAR_HEIGHT, height - MIN_BAR_HEIGHT);
@@ -44,4 +44,4 @@ export function Sparkline({ data, color, width = 56, height = 18 }: SparklinePro
       })}
     </Svg>
   );
-}
+};

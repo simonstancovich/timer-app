@@ -25,7 +25,7 @@ type GradientTextProps = Omit<TextProps, 'children'> & {
   end?: { x: number; y: number };
 };
 
-export function GradientText({
+export const GradientText = ({
   children,
   gradient,
   variant = 'display',
@@ -33,7 +33,7 @@ export function GradientText({
   end = { x: 1, y: 1 },
   style,
   ...rest
-}: GradientTextProps) {
+}: GradientTextProps) => {
   const textStyle = [variantToStyle[variant], style];
   return (
     <MaskedView
@@ -50,4 +50,4 @@ export function GradientText({
       </LinearGradient>
     </MaskedView>
   );
-}
+};

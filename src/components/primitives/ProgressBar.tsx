@@ -16,7 +16,7 @@ type ProgressBarProps = Omit<ViewProps, 'children'> & {
   radius?: number;
 };
 
-export function ProgressBar({
+export const ProgressBar = ({
   pct,
   color,
   bgColor = 'surf',
@@ -24,7 +24,7 @@ export function ProgressBar({
   radius = 3,
   style,
   ...rest
-}: ProgressBarProps) {
+}: ProgressBarProps) => {
   const clamped = Math.max(0, Math.min(100, pct));
   const width = useSharedValue(clamped);
 
@@ -46,4 +46,4 @@ export function ProgressBar({
       />
     </View>
   );
-}
+};

@@ -16,7 +16,7 @@ type CardProps = Omit<ViewProps, 'children'> & {
 
 const STRIPE_HEIGHT = 5;
 
-export function Card({ children, topStripe, style, ...rest }: CardProps) {
+export const Card = ({ children, topStripe, style, ...rest }: CardProps) => {
   return (
     <View
       {...rest}
@@ -35,13 +35,13 @@ export function Card({ children, topStripe, style, ...rest }: CardProps) {
       <View>{children}</View>
     </View>
   );
-}
+};
 
-function CardTopStripe({ pct, color, colorLight }: TopStripe) {
+const CardTopStripe = ({ pct, color, colorLight }: TopStripe) => {
   const clamped = Math.max(0, Math.min(100, pct));
   return (
     <View style={{ height: STRIPE_HEIGHT, backgroundColor: colors[colorLight] }}>
       <View style={{ height: STRIPE_HEIGHT, width: `${clamped}%`, backgroundColor: colors[color] }} />
     </View>
   );
-}
+};
