@@ -32,14 +32,52 @@ interface Store extends AppState {
 
 const DEFAULT_WEEKLY_GOAL_MINUTES = 40 * 60;
 const DEFAULT_DAILY_GOAL_MINUTES = 9 * 60;
+const DEEP_WORK_MINUTES = 90;
 
-const newProjectId = () =>
-  `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+const newId = (prefix: string): string =>
+  `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
-const initialState: AppState = {
+const startOfWeekMs = (d: Date): number => {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  const day = copy.getDay();
+  const mondayOffset = (day + 6) % 7;
+  copy.setDate(copy.getDate() - mondayOffset);
+  return copy.getTime();
+};
+
+const mondayIndex = (d: Date): number => (d.getDay() + 6) % 7;
+
+const isInCurrentWeek = (iso: string, now: Date): boolean => {
+  const t = new Date(iso).getTime();
+  return t >= startOfWeekMs(now);
+};
+
+const bumpProjectTotals = (
+  project: Project,
+  session: Session,
+  now: Date,
+): Project => {
+  const inWeek = isInCurrentWeek(session.startedAt, now);
+  const dayIdx = mondayIndex(new Date(session.startedAt));
+  const nextWeekSessions = inWeek
+    ? project.weekSessions.map((count, i) => (i === dayIdx ? count + 1 : count))
+    : project.weekSessions;
+  return {
+    ...project,
+    totalMinutes: project.totalMinutes + session.durationMinutes,
+    weekMinutes: inWeek ? project.weekMinutes + session.durationMinutes : project.weekMinutes,
+    weekSessions: nextWeekSessions,
+    lastNote: session.note.trim().length > 0 ? session.note : project.lastNote,
+  };
+};
+
+export const initialState: AppState = {
   projects: [],
   sessions: [],
   activeSessionId: null,
+  activePausedAt: null,
+  activePausedAccumulatedMs: 0,
   dailyGoalMinutes: DEFAULT_DAILY_GOAL_MINUTES,
   onboardingDone: false,
 };
@@ -53,17 +91,114 @@ export const useStore = create<Store>()(
     (set, get) => ({
       ...initialState,
 
-      startSession: notImplemented('startSession'),
-      pauseSession: notImplemented('pauseSession'),
-      resumeSession: notImplemented('resumeSession'),
-      stopSession: () => {
-        throw new Error('store.stopSession not implemented yet');
+      startSession: (projectId, note) => {
+        if (get().activeSessionId) {
+          throw new Error('store.startSession: a session is already active');
+        }
+        const session: Session = {
+          id: newId('s'),
+          projectId,
+          startedAt: new Date().toISOString(),
+          endedAt: null,
+          durationMinutes: 0,
+          note: note ?? '',
+          isDeep: false,
+          isPast: false,
+        };
+        set((state) => ({
+          sessions: [...state.sessions, session],
+          activeSessionId: session.id,
+          activePausedAt: null,
+          activePausedAccumulatedMs: 0,
+        }));
       },
-      addPastSession: notImplemented('addPastSession'),
+
+      pauseSession: () => {
+        const { activeSessionId, activePausedAt } = get();
+        if (!activeSessionId || activePausedAt) return;
+        set({ activePausedAt: new Date().toISOString() });
+      },
+
+      resumeSession: () => {
+        const { activeSessionId, activePausedAt, activePausedAccumulatedMs } = get();
+        if (!activeSessionId || !activePausedAt) return;
+        const delta = Date.now() - new Date(activePausedAt).getTime();
+        set({
+          activePausedAt: null,
+          activePausedAccumulatedMs: activePausedAccumulatedMs + Math.max(0, delta),
+        });
+      },
+
+      stopSession: () => {
+        const {
+          activeSessionId,
+          activePausedAt,
+          activePausedAccumulatedMs,
+          sessions,
+          projects,
+        } = get();
+        if (!activeSessionId) return null;
+        const existing = sessions.find((s) => s.id === activeSessionId);
+        if (!existing) {
+          set({ activeSessionId: null, activePausedAt: null, activePausedAccumulatedMs: 0 });
+          return null;
+        }
+
+        const now = new Date();
+        const extraPausedMs = activePausedAt
+          ? Math.max(0, now.getTime() - new Date(activePausedAt).getTime())
+          : 0;
+        const totalPausedMs = activePausedAccumulatedMs + extraPausedMs;
+        const elapsedMs = now.getTime() - new Date(existing.startedAt).getTime() - totalPausedMs;
+        const durationMinutes = Math.max(0, Math.round(elapsedMs / 60000));
+
+        const completed: Session = {
+          ...existing,
+          endedAt: now.toISOString(),
+          durationMinutes,
+          isDeep: durationMinutes >= DEEP_WORK_MINUTES,
+        };
+
+        const nextProjects = projects.map((p) =>
+          p.id === completed.projectId ? bumpProjectTotals(p, completed, now) : p,
+        );
+
+        set({
+          sessions: sessions.map((s) => (s.id === completed.id ? completed : s)),
+          projects: nextProjects,
+          activeSessionId: null,
+          activePausedAt: null,
+          activePausedAccumulatedMs: 0,
+        });
+
+        return completed;
+      },
+
+      addPastSession: (projectId, durationMinutes, startedAt, note) => {
+        const rounded = Math.max(0, Math.round(durationMinutes));
+        const start = new Date(startedAt);
+        const end = new Date(start.getTime() + rounded * 60000);
+        const session: Session = {
+          id: newId('s'),
+          projectId,
+          startedAt: start.toISOString(),
+          endedAt: end.toISOString(),
+          durationMinutes: rounded,
+          note: note ?? '',
+          isDeep: rounded >= DEEP_WORK_MINUTES,
+          isPast: true,
+        };
+        set((state) => ({
+          sessions: [...state.sessions, session],
+          projects: state.projects.map((p) =>
+            p.id === projectId ? bumpProjectTotals(p, session, new Date()) : p,
+          ),
+        }));
+      },
 
       createProject: (name, color, customColor) => {
         const project: Project = {
-          id: newProjectId(),
+          id: newId('p'),
           name: name.trim(),
           color,
           ...(color === 'custom' && customColor
@@ -100,6 +235,8 @@ export const useStore = create<Store>()(
         projects: state.projects,
         sessions: state.sessions,
         activeSessionId: state.activeSessionId,
+        activePausedAt: state.activePausedAt,
+        activePausedAccumulatedMs: state.activePausedAccumulatedMs,
         dailyGoalMinutes: state.dailyGoalMinutes,
         onboardingDone: state.onboardingDone,
       }),
