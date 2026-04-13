@@ -198,7 +198,7 @@ describe('LiveTimerScreen', () => {
   it('renders the existing session note as the input value', () => {
     const project = makeProject();
     useStore.setState({ projects: [project] });
-    useStore.getState().startSession(project.id, 'prefilled');
+    useStore.getState().startSession(project.id, { note: 'prefilled' });
 
     const { getByLabelText } = render(<LiveTimerScreen project={project} />);
     expect(getByLabelText('Session note').props.value).toBe('prefilled');
