@@ -1,9 +1,20 @@
-export type ProjectColor = 'violet' | 'ocean' | 'ember' | 'forest' | 'rose' | 'amber' | 'teal';
+export type PresetProjectColor =
+  | 'violet'
+  | 'ocean'
+  | 'ember'
+  | 'forest'
+  | 'rose'
+  | 'amber'
+  | 'teal';
+
+export type ProjectColor = PresetProjectColor | 'custom';
 
 export interface Project {
   id: string;
   name: string;
   color: ProjectColor;
+  customColor?: string;
+  customColorDark?: string;
   lastNote: string;
   weeklyGoalMinutes: number;
   weekSessions: number[];

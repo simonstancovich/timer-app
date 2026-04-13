@@ -48,6 +48,21 @@ If the staged diff isn't a 9/10 right now, **you fix it before you commit** — 
    - **No comments unless truly necessary** (see below).
 5. If anything's below 9/10, fix it. Re-amend if needed. Then commit.
 
+### What 9/10 actually looks like — concrete heuristics
+
+These are the patterns I keep flagging in review. Every PR is held against them.
+
+1. **Dead code is unacceptable** — orphan styles, static style props that get overridden by animated styles every render, unused exports, backup files (`*.bak`, `*.old`), throwing stubs without a real caller. Delete before commit.
+2. **Single source of truth** — one canonical list/table per concept; derive the rest. No parallel arrays describing the same set. Prefer token derivation (`colors[`${c}Dark`]`) over hand-maintained duplicate maps.
+3. **Memoization must actually fire** — verify the chain: stable props all the way down to a `memo`'d child. Inline arrows in `renderItem` (`onPress={() => handlePick(item)}`) defeat memo. For list rows: pass `item` and a stable handler down; let the row do `useCallback(() => onPick(item), [onPick, item])` internally. If memo doesn't help (e.g. `label` changes per keystroke), **drop the memo** — false symmetry is worse than no memo.
+4. **Encapsulate orchestration in custom hooks** — multi-side-effect handlers (≥3 setStates / shared-value writes / animations triggered together) belong in a `useXxxState()` hook. The screen body should read declaratively: `const { selected, pick } = useSetupColorState(...)`. Not 10 lines of imperative side-effect orchestration inline.
+5. **Type narrowing at boundaries, never at call sites** — if a hook returns a poorly-typed thing, fix the hook's return type. `as StyleProp<TextStyle>` repeated at 3 call sites is wrong; one encapsulated cast inside the hook is right. No `as never`, no `as unknown as X`, no `as any` at call sites.
+6. **`noUncheckedIndexedAccess`-safe code** — never `arr[0]` without a guard or `!`. Construct module-level constants directly; don't index into arrays for them. If indexing is necessary, use `.find(...) ?? fallback`.
+7. **Pure functions get tests** — utilities (color math, generators, formatters) live in `src/utils/` with a `.test.ts` next to them. Hooks with native bindings (Reanimated worklets, AsyncStorage) — fair to skip with mocks at the boundary. UI animation timing — manual visual QA, not jest.
+8. **File organization** — screen route files ≤ 300 lines; extract screen-local helpers to `src/features/<screen-name>/`. Single-responsibility modules with descriptive filenames. Each module readable top-to-bottom: imports → constants → exports → styles.
+9. **Clean imports** — no `const X = ...` declarations interleaved with import statements. Import groups: external packages → internal absolute → relative — separated by blank lines. One blank line between the last import and the first declaration.
+10. **Iterative review = honest critique, not rubber-stamps** — when reviewing a diff, find concrete, fixable misses and propose specific fixes. Apply them. Re-rate. The goal is 9/10 work, not "looks good to me."
+
 ### Code style
 
 - **Default to ZERO comments.** Identifier names and types carry meaning. Don't narrate code. Don't add docstrings, header comments, section banners, or "// future X here" placeholders. The exception is genuinely non-obvious constraints (workarounds for external bugs, subtle invariants the code can't express), and even then keep it one short line. License headers / auto-generated markers are fine.

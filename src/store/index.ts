@@ -17,9 +17,14 @@ interface Store extends AppState {
     note?: string,
   ) => void;
 
-  createProject: (name: string, color: ProjectColor) => Project;
+  createProject: (
+    name: string,
+    color: ProjectColor,
+    customColor?: { hex: string; dark: string },
+  ) => Project;
   updateProject: (id: string, updates: Partial<Project>) => void;
   archiveProject: (id: string) => void;
+  setOnboardingDone: (done: boolean) => void;
 
   getActiveProject: () => Project | null;
   getTodaySessions: () => Session[];
@@ -27,6 +32,11 @@ interface Store extends AppState {
   getWeekMinutes: () => number;
   getProjectWeekMinutes: (projectId: string) => number;
 }
+
+const DEFAULT_WEEKLY_GOAL_MINUTES = 40 * 60;
+
+const newProjectId = () =>
+  `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 const initialState: AppState = {
   projects: [],
@@ -54,11 +64,28 @@ export const useStore = create<Store>()(
       },
       addPastSession: notImplemented('addPastSession'),
 
-      createProject: () => {
-        throw new Error('store.createProject not implemented yet');
+      createProject: (name, color, customColor) => {
+        const project: Project = {
+          id: newProjectId(),
+          name: name.trim(),
+          color,
+          ...(color === 'custom' && customColor
+            ? { customColor: customColor.hex, customColorDark: customColor.dark }
+            : {}),
+          lastNote: '',
+          weeklyGoalMinutes: DEFAULT_WEEKLY_GOAL_MINUTES,
+          weekSessions: [0, 0, 0, 0, 0, 0, 0],
+          totalMinutes: 0,
+          weekMinutes: 0,
+          createdAt: new Date().toISOString(),
+          archived: false,
+        };
+        set((state) => ({ projects: [...state.projects, project] }));
+        return project;
       },
       updateProject: notImplemented('updateProject'),
       archiveProject: notImplemented('archiveProject'),
+      setOnboardingDone: (done) => set({ onboardingDone: done }),
 
       getActiveProject: () => {
         const { activeSessionId, sessions, projects } = get();
