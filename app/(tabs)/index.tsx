@@ -6,6 +6,7 @@ import { MonoText } from '../../src/components/primitives/MonoText';
 import { Pill } from '../../src/components/primitives/Pill';
 import { ProgressBar } from '../../src/components/primitives/ProgressBar';
 import { Sparkline } from '../../src/components/primitives/Sparkline';
+import { Timeline, type TimelineSession } from '../../src/components/primitives/Timeline';
 import { UIText } from '../../src/components/primitives/UIText';
 import { colors } from '../../src/tokens/colors';
 import { spacing } from '../../src/tokens/spacing';
@@ -133,9 +134,25 @@ const HomeScreen = () => {
           </Card>
         </View>
 
+        <View style={{ gap: spacing.sm }}>
+          <UIText variant="micro" color="sub">
+            TIMELINE
+          </UIText>
+          <Timeline sessions={sampleTimelineSessions} />
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+const sampleTimelineSessions: TimelineSession[] = [
+  { startMinuteOffset: 0, durationMinutes: 55, color: 'violet', label: 'Deep work' },
+  { startMinuteOffset: 75, durationMinutes: 30, color: 'ocean', label: 'Review' },
+  { startMinuteOffset: 140, durationMinutes: 45, color: 'ember', label: 'Writing' },
+  { startMinuteOffset: 220, durationMinutes: 25, color: 'amber', label: 'Errands' },
+  { startMinuteOffset: 300, durationMinutes: 18, color: 'teal', label: 'In progress', isLive: true },
+];
 };
 
 export default HomeScreen;
