@@ -165,14 +165,28 @@ Test stack: **jest@29 + jest-expo@54 + @testing-library/react-native**. Pinned t
 
 ```
 src/
-├── components/primitives/     # MonoText, UIText, Pill, Card, ProgressBar, Sparkline, GradientText (each with .test.tsx)
+├── components/primitives/     # MonoText, UIText, Pill, Card, ProgressBar, Sparkline, GradientText, Timeline (each with .test.tsx)
+├── features/
+│   ├── home/                  # Header, TodayCard, ProjectCard, useHomeData
+│   └── setup/                 # ColorDot, CtaButton, generator, scheme, useSetupColorState
+├── dev/                       # __DEV__-only scaffolding (seedDemoData)
 ├── tokens/                    # colors, typography, spacing, shadows
-├── types/                     # Project, Session, AppState
-└── store/                     # zustand store (persist + version + migrate)
+├── types/                     # Project, Session, AppState, PresetProjectColor, isPresetProjectColor guard
+├── utils/                     # color, streak, time (all pure + tested)
+└── store/                     # zustand store (persist + version + migrate) + useStoreHydrated hook
 
 app/
-├── _layout.tsx                # Root: font loading, splash lifecycle
-└── (tabs)/index.tsx           # Currently a temporary primitives sandbox; will become Home in Phase 3
+├── _layout.tsx                # Root: font loading + store hydration gate + splash lifecycle
+├── index.tsx                  # Entry redirect: onboardingDone ? /(tabs) : /onboarding/welcome
+├── (tabs)/
+│   ├── _layout.tsx
+│   ├── index.tsx              # Home idle screen (Phase 3)
+│   └── explore.tsx            # Expo template placeholder (deleted in a later phase)
+├── onboarding/
+│   ├── _layout.tsx
+│   ├── welcome.tsx            # Screen 01 — letter-stagger color-pop intro
+│   └── setup.tsx              # Screen 02 — horizontal color scroll + project creation
+└── modal.tsx                  # Expo template placeholder
 
 ios/                           # Native Xcode project (committed, will host Dynamic Island widget extension)
 .github/workflows/             # ios-testflight.yml — push to main → EAS build + auto-submit
@@ -186,20 +200,26 @@ docs/spec.md                   # Full design + interaction spec (single source o
 
 | Phase | Status | Notes |
 |---|---|---|
-| 0. Setup (toolchain, scaffolds, deps, prebuild, tokens, types, store stub) | ✅ Done |  |
-| 1. Core primitives (`MonoText`, `UIText`, `Pill`, `Card`, `ProgressBar`, `Sparkline`, `GradientText`, `Timeline`) | ⏳ In progress | All but `<Timeline>` shipped. `<Timeline>` is next. |
-| 2. Onboarding (welcome + setup screens) | ⏳ Pending |  |
-| 3. Home idle (replaces sandbox) | ⏳ Pending |  |
-| 4. Live timer (full-screen color takeover, marquee feature) | ⏳ Pending |  |
-| 5. Celebration + Projects + Stats | ⏳ Pending |  |
+| 0. Setup (toolchain, scaffolds, deps, prebuild, tokens, types, store stub) | ✅ Done | |
+| 1. Core primitives (`MonoText`, `UIText`, `Pill`, `Card`, `ProgressBar`, `Sparkline`, `GradientText`, `Timeline`) | ✅ Done | All 8 shipped in PRs #4–#6 + #12, plus #13 refactor to arrow-const. |
+| 2. Onboarding (welcome + setup screens) | ✅ Done | Welcome #15 (letter-stagger color-pop), Setup #16 (infinite color scroll + scheme-aware UI), onboarding gate #17 (redirect on fresh install). |
+| 3. Home idle (replaces sandbox) | ✅ Done | Shipped in #18: Header + TodayCard + Timeline card + Project cards + auto-seed dev data. |
+| 4. Live timer (full-screen color takeover, marquee feature) | ⏳ Next | Tap a project's play button → full-screen color takeover, breathing timer, milestone haptics, note input. Wires up `store.startSession` / `stopSession` / `pauseSession` / `resumeSession`. |
+| 5. Celebration + Projects + Stats | ⏳ Pending | Post-session celebration screen, projects list view, stats tab. |
 | 6. Dynamic Island (Swift widget extension, ActivityKit, RN bridge) | ⏳ Pending | Requires real iPhone iOS 16.1+. |
-| 7. Polish (notifications, accessibility, app icon, splash, TestFlight) | ⏳ Partly done | TestFlight pipeline live; icon shipped; basic centered splash shipped. |
+| 7. Polish (notifications, accessibility, app icon, splash, TestFlight) | ⏳ Partly done | TestFlight pipeline live + submitting successfully as of #19 (ASC export-compliance flag set); icon shipped; basic centered splash shipped. |
 
 ---
 
-## Next up: `<Timeline>` primitive
+## Current state
 
-Spec §6 — horizontal session timeline for today, sessions as colored blocks from 9am → current time (540min window). Track 2px tall in `surf`; session blocks 24px tall, borderRadius 5, top stripe 3px in a darkened color. Live session shows a pulsing 10px forest-green dot. See `docs/spec.md` for the full prop signature.
+- **Active branch for new work:** cut fresh from `main`.
+- **Last merged PR:** #18 — Home idle.
+- **Last open PR:** #19 — ASC export-compliance hotfix. Merge before the next push to `main` or TestFlight auto-submit will fail again.
+- **Next up:** Phase 4 — Live Timer (spec §7 Screen 04 and onward).
+- **Store actions still stubbed** (throw `notImplemented`): `startSession`, `pauseSession`, `resumeSession`, `stopSession`, `addPastSession`, `updateProject`, `archiveProject`. Phase 4 will implement the session lifecycle quartet.
+- **Play button on ProjectCard** currently `console.warn`s; Phase 4 will wire it to `/timer` or similar route with the project as a query param.
+- **`sampleTimelineSessions` sandbox** is gone; Home now reads real sessions from the store. Dev seeding auto-fires on first dev launch when `sessions.length === 0` — see `src/dev/seedDemoData.ts`.
 
 ---
 
@@ -224,7 +244,9 @@ npm test
 npx tsc --noEmit
 ```
 
-The default tab (`app/(tabs)/index.tsx`) is a primitives sandbox showing every component for visual QA. It will be replaced by the real Home in Phase 3.
+The default tab (`app/(tabs)/index.tsx`) is the real Home idle screen. On a fresh dev install (no sessions persisted), the screen auto-seeds demo data on mount so every state (hot project, needs-love project, today's timeline, streak badge) is visible. To wipe and re-seed, clear AsyncStorage via Expo's dev menu or tap the **DEV · Seed demo data** pill at the bottom of Home.
+
+Welcome + Setup can be tested directly by clearing AsyncStorage and reloading — the root `app/index.tsx` redirect will route to `/onboarding/welcome`.
 
 ---
 
@@ -245,7 +267,7 @@ Colors — flat keys in `src/tokens/colors.ts`:
 - Text: `ink`, `sub`, `muted`
 - Brand: `brand`, `brandLight`, `brandDark`
 - 7 project palettes: `violet`, `violetLight`, `violetDark`, `ocean`, `oceanLight`, `oceanDark`, `ember`, `emberLight`, `emberDark`, `forest`, `forestLight`, `forestDark`, `rose`, `roseLight`, `roseDark`, `amber`, `amberLight`, `amberDark`, `teal`, `tealLight`, `tealDark`
-- Streak: `streakBg`, `streakText`
+- Streak: `streakBg`, `streakBorder`, `streakText`
 - Gradients (separate export): `celebration`
 
 Typography — `src/tokens/typography.ts`:
@@ -258,9 +280,12 @@ Spacing — `src/tokens/spacing.ts`: `xs` 4, `sm` 8, `md` 12, `lg` 16, `xl` 20, 
 
 ## Known follow-ups
 
-- `<Timeline>` primitive (Phase 1 final piece)
-- Replace temporary sandbox in `app/(tabs)/index.tsx` with onboarding + real Home
-- Full-bleed designed splash screen ("Arc / Your day. Your arc.") — current splash is centered icon only because Expo's plugin doesn't support full-bleed; would need manual `LaunchScreen.storyboard` edit
-- Dark mode visuals across screens
-- Set up Push Notifications in EAS once milestone notifications are wired
-- Extract `flattenStyle` test helper into `src/test-utils/` once it's used in 5+ test files (currently 7 — overdue)
+- **Phase 4 — Live timer** (next feature work — see Build phases table for scope)
+- **Session-lifecycle store actions** are stubbed — implement in Phase 4 alongside the screen
+- **Timeline custom-color support** — the primitive only accepts named `PresetProjectColor`. Custom-hex projects fall back to `'violet'` in the Home timeline view. Fix when we touch Timeline again.
+- **Delete Expo template cruft** — `components/` (top-level, not `src/components/`), `app/(tabs)/explore.tsx`, `app/modal.tsx`, `app/+not-found.tsx` (if still present). None referenced by real routes; leftover from `create-expo-app`.
+- **`flattenStyle` test helper** still duplicated across primitive tests (now 8 files) — extract to `src/test-utils/` next time a primitive test is being touched.
+- **Full-bleed designed splash** ("Arc / Your day. Your arc.") — current splash is centered icon only because Expo's plugin doesn't support full-bleed; would need manual `LaunchScreen.storyboard` edit.
+- **Dark mode visuals** across screens.
+- **Push Notifications** — set up in EAS once milestone notifications are wired in Phase 4.
+- **CI check** — add `tsc --noEmit` + `npm test` as required on PR. #14 (the brace hotfix) would've been caught before merge.
