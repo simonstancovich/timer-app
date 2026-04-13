@@ -16,6 +16,7 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useStoreHydrated } from '../src/store';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -25,6 +26,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const RootLayout = () => {
   const colorScheme = useColorScheme();
+  const storeHydrated = useStoreHydrated();
 
   const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular,
@@ -36,17 +38,20 @@ const RootLayout = () => {
     SpaceMono_700Bold,
   });
 
+  const ready = (fontsLoaded || fontError) && storeHydrated;
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (ready) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontError]);
+  }, [ready]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!ready) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

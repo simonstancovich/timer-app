@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AppState, Project, ProjectColor, Session } from '../types';
@@ -120,3 +121,15 @@ export const useStore = create<Store>()(
     },
   ),
 );
+
+export const useStoreHydrated = (): boolean => {
+  const [hydrated, setHydrated] = useState(() => useStore.persist.hasHydrated());
+
+  useEffect(() => {
+    const unsubFinish = useStore.persist.onFinishHydration(() => setHydrated(true));
+    setHydrated(useStore.persist.hasHydrated());
+    return unsubFinish;
+  }, []);
+
+  return hydrated;
+};
