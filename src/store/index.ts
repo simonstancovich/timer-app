@@ -11,6 +11,7 @@ interface Store extends AppState {
   pauseSession: () => void;
   resumeSession: () => void;
   stopSession: () => Session | null;
+  updateActiveSessionNote: (note: string) => void;
   addPastSession: (
     projectId: string,
     durationMinutes: number,
@@ -175,6 +176,16 @@ export const useStore = create<Store>()(
         });
 
         return completed;
+      },
+
+      updateActiveSessionNote: (note) => {
+        const { activeSessionId } = get();
+        if (!activeSessionId) return;
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === activeSessionId ? { ...s, note } : s,
+          ),
+        }));
       },
 
       addPastSession: (projectId, durationMinutes, startedAt, note) => {

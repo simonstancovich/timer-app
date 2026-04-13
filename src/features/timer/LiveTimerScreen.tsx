@@ -1,7 +1,14 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, {
   Easing,
   interpolateColor,
@@ -23,7 +30,11 @@ import type { Project } from '../../types';
 const TAKEOVER_MS = 400;
 const BREATHE_SCALE = 1.013;
 const BREATHE_MS = 1500;
-const LIGHT_BG_LUMINANCE_THRESHOLD = 0.5;
+const INK_LUMINANCE = relativeLuminance(colors.ink);
+const WHITE_LUMINANCE = 1;
+
+const contrastRatio = (a: number, b: number): number =>
+  (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
 type Tone = 'light' | 'dark';
 
@@ -32,6 +43,7 @@ type Palette = {
   foregroundToken: ColorToken;
   tint10: string;
   tint22: string;
+  tint35: string;
   tint60: string;
   stopBg: string;
   stopTextColor: string;
@@ -43,6 +55,7 @@ const lightPalette = (projectDark: string): Palette => ({
   foregroundToken: 'white',
   tint10: 'rgba(255,255,255,0.10)',
   tint22: 'rgba(255,255,255,0.22)',
+  tint35: 'rgba(255,255,255,0.35)',
   tint60: 'rgba(255,255,255,0.60)',
   stopBg: colors.white,
   stopTextColor: projectDark,
@@ -54,14 +67,19 @@ const darkPalette: Palette = {
   foregroundToken: 'ink',
   tint10: 'rgba(0,0,0,0.08)',
   tint22: 'rgba(0,0,0,0.22)',
+  tint35: 'rgba(0,0,0,0.35)',
   tint60: 'rgba(0,0,0,0.55)',
   stopBg: colors.ink,
   stopTextColor: colors.white,
   statusBarStyle: 'dark',
 };
 
-const paletteFor = (bgHex: string, projectDark: string): Palette =>
-  relativeLuminance(bgHex) > LIGHT_BG_LUMINANCE_THRESHOLD ? darkPalette : lightPalette(projectDark);
+const paletteFor = (bgHex: string, projectDark: string): Palette => {
+  const bgL = relativeLuminance(bgHex);
+  const inkContrast = contrastRatio(bgL, INK_LUMINANCE);
+  const whiteContrast = contrastRatio(bgL, WHITE_LUMINANCE);
+  return inkContrast > whiteContrast ? darkPalette : lightPalette(projectDark);
+};
 
 const pad = (n: number): string => n.toString().padStart(2, '0');
 
@@ -84,6 +102,9 @@ const todayIso = (d: Date): string => d.toISOString().slice(0, 10);
 
 export const LiveTimerScreen = ({ project }: { project: Project }) => {
   const { elapsedSeconds, isPaused } = useTimer();
+  const activeSession = useStore((s) =>
+    s.activeSessionId ? (s.sessions.find((x) => x.id === s.activeSessionId) ?? null) : null,
+  );
   const priorSecondsToday = useStore((s) => {
     const today = todayIso(new Date());
     return s.sessions
@@ -96,6 +117,7 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
   const pauseSession = useStore((s) => s.pauseSession);
   const resumeSession = useStore((s) => s.resumeSession);
   const stopSession = useStore((s) => s.stopSession);
+  const updateActiveSessionNote = useStore((s) => s.updateActiveSessionNote);
 
   const projectDark = getProjectDarkHex(project);
   const palette = paletteFor(projectDark, projectDark);
@@ -137,29 +159,49 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
   return (
     <Animated.View style={[styles.root, bgStyle]}>
       <StatusBar style={palette.statusBarStyle} animated />
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <UIText variant="micro" color={palette.foregroundToken} style={styles.projectLabel}>
-            TRACKING {project.name.toUpperCase()}
-          </UIText>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.root}
+      >
+        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+          <View style={styles.header}>
+            <UIText variant="micro" color={palette.foregroundToken} style={styles.projectLabel}>
+              TRACKING {project.name.toUpperCase()}
+            </UIText>
+          </View>
 
-        <Animated.View style={[styles.timerBlock, timerStyle]}>
-          <MonoText size="xl" color={palette.foregroundToken}>
-            {formatElapsed(priorSecondsToday + elapsedSeconds)}
-          </MonoText>
-          <UIText
-            variant="caption"
+          <Animated.View style={[styles.timerBlock, timerStyle]}>
+            <MonoText size="xl" color={palette.foregroundToken}>
+              {formatElapsed(priorSecondsToday + elapsedSeconds)}
+            </MonoText>
+            <UIText
+              variant="caption"
+              style={[
+                styles.pausedLabel,
+                { opacity: isPaused ? 1 : 0, color: palette.tint60 },
+              ]}
+            >
+              Paused
+            </UIText>
+          </Animated.View>
+
+          <TextInput
+            value={activeSession?.note ?? ''}
+            onChangeText={updateActiveSessionNote}
+            placeholder="describe your task…"
+            placeholderTextColor={palette.tint35}
+            accessibilityLabel="Session note"
             style={[
-              styles.pausedLabel,
-              { opacity: isPaused ? 1 : 0, color: palette.tint60 },
+              styles.noteInput,
+              {
+                backgroundColor: palette.tint10,
+                borderColor: palette.tint22,
+                color: palette.tone === 'light' ? colors.white : colors.ink,
+              },
             ]}
-          >
-            Paused
-          </UIText>
-        </Animated.View>
+          />
 
-        <View style={styles.controls}>
+          <View style={styles.controls}>
           <Pressable
             onPress={handlePauseResume}
             accessibilityRole="button"
@@ -188,8 +230,9 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
               Stop & save
             </UIText>
           </Pressable>
-        </View>
-      </SafeAreaView>
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Animated.View>
   );
 };
@@ -218,6 +261,15 @@ const styles = StyleSheet.create({
   },
   pausedLabel: {
     letterSpacing: 0.5,
+  },
+  noteInput: {
+    height: 56,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: 18,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 15,
+    marginBottom: 12,
   },
   controls: {
     flexDirection: 'row',

@@ -206,6 +206,35 @@ describe('stopSession', () => {
   });
 });
 
+describe('updateActiveSessionNote', () => {
+  it('updates the active session note without creating a new session', () => {
+    const project = createTestProject();
+    useStore.getState().startSession(project.id);
+    const idBefore = useStore.getState().sessions[0].id;
+
+    useStore.getState().updateActiveSessionNote('working on deposit flow');
+
+    const { sessions } = useStore.getState();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].id).toBe(idBefore);
+    expect(sessions[0].note).toBe('working on deposit flow');
+  });
+
+  it('is a no-op when no session is active', () => {
+    useStore.getState().updateActiveSessionNote('ignored');
+    expect(useStore.getState().sessions).toHaveLength(0);
+  });
+
+  it('persists onto the session when stopped', () => {
+    const project = createTestProject();
+    useStore.getState().startSession(project.id);
+    useStore.getState().updateActiveSessionNote('final note');
+    const stopped = useStore.getState().stopSession();
+    expect(stopped!.note).toBe('final note');
+    expect(useStore.getState().projects[0].lastNote).toBe('final note');
+  });
+});
+
 describe('addPastSession', () => {
   it('creates a completed session with isPast=true', () => {
     jest.setSystemTime(new Date('2026-04-15T10:00:00Z'));
