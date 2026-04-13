@@ -26,7 +26,8 @@ import { useTimer } from '../../hooks/useTimer';
 import { useStore } from '../../store';
 import { colors, type ColorToken } from '../../tokens/colors';
 import { relativeLuminance } from '../../utils/color';
-import type { Project } from '../../types';
+import type { Project, Task } from '../../types';
+import { TaskBubbles } from './TaskBubbles';
 
 const TAKEOVER_MS = 400;
 const BREATHE_SCALE = 1.013;
@@ -123,6 +124,8 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
   const resumeSession = useStore((s) => s.resumeSession);
   const stopSession = useStore((s) => s.stopSession);
   const updateActiveSessionNote = useStore((s) => s.updateActiveSessionNote);
+  const updateActiveSession = useStore((s) => s.updateActiveSession);
+  const createTask = useStore((s) => s.createTask);
 
   const projectDark = getProjectDarkHex(project);
   const palette = paletteFor(projectDark, projectDark);
@@ -181,6 +184,20 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
     router.replace('/(tabs)');
   };
 
+  const handleSelectTask = (task: Task) => {
+    const isTemplate = task.isTemplate;
+    const target = isTemplate ? createTask(project.id, task.name) : task;
+    updateActiveSession({ taskId: target.id, note: target.name });
+  };
+
+  const handleSubmitNote = () => {
+    const raw = activeSession?.note ?? '';
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return;
+    const task = createTask(project.id, trimmed);
+    updateActiveSession({ taskId: task.id, note: trimmed });
+  };
+
   return (
     <Animated.View style={[styles.root, bgStyle]}>
       <StatusBar style={palette.statusBarStyle} animated />
@@ -221,6 +238,8 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
           <TextInput
             value={activeSession?.note ?? ''}
             onChangeText={updateActiveSessionNote}
+            onSubmitEditing={handleSubmitNote}
+            returnKeyType="done"
             placeholder="describe your task…"
             placeholderTextColor={palette.tint35}
             accessibilityLabel="Session note"
@@ -233,6 +252,15 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
               },
             ]}
           />
+
+          <TaskBubbles
+            projectId={project.id}
+            activeTaskId={activeSession?.taskId ?? null}
+            tone={palette.tone}
+            onSelectTask={handleSelectTask}
+          />
+
+          <View style={styles.spacer} />
 
           <View style={styles.controls}>
           <Pressable
@@ -293,10 +321,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   timerBlock: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: 8,
+    marginTop: 40,
+    marginBottom: 16,
+  },
+  spacer: {
+    flex: 1,
   },
   pausedLabel: {
     letterSpacing: 0.5,
