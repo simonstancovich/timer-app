@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -30,6 +31,10 @@ import type { Project } from '../../types';
 const TAKEOVER_MS = 400;
 const BREATHE_SCALE = 1.013;
 const BREATHE_MS = 1500;
+const MILESTONE_SECONDS = [3600, 7200] as const;
+const DEEP_WORK_SECONDS = 90 * 60;
+const PULSE_UP = 1.09;
+const PULSE_DOWN = 0.96;
 const INK_LUMINANCE = relativeLuminance(colors.ink);
 const WHITE_LUMINANCE = 1;
 
@@ -124,6 +129,8 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
 
   const takeover = useSharedValue(0);
   const breathe = useSharedValue(1);
+  const pulse = useSharedValue(1);
+  const firedMilestones = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     takeover.value = withTiming(1, { duration: TAKEOVER_MS, easing: Easing.out(Easing.cubic) });
@@ -140,11 +147,29 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
     );
   }, [breathe]);
 
+  useEffect(() => {
+    for (const threshold of MILESTONE_SECONDS) {
+      if (elapsedSeconds >= threshold && !firedMilestones.current.has(threshold)) {
+        firedMilestones.current.add(threshold);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        pulse.value = withSequence(
+          withTiming(PULSE_UP, { duration: 200 }),
+          withTiming(PULSE_DOWN, { duration: 150 }),
+          withTiming(1, { duration: 300 }),
+        );
+      }
+    }
+  }, [elapsedSeconds, pulse]);
+
+  const isDeepWork = elapsedSeconds >= DEEP_WORK_SECONDS;
+
   const bgStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(takeover.value, [0, 1], [colors.bg, projectDark]),
   }));
 
-  const timerStyle = useAnimatedStyle(() => ({ transform: [{ scale: breathe.value }] }));
+  const timerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: breathe.value * pulse.value }],
+  }));
 
   const handlePauseResume = () => {
     if (isPaused) resumeSession();
@@ -165,9 +190,17 @@ export const LiveTimerScreen = ({ project }: { project: Project }) => {
       >
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
           <View style={styles.header}>
-            <UIText variant="micro" color={palette.foregroundToken} style={styles.projectLabel}>
-              TRACKING {project.name.toUpperCase()}
-            </UIText>
+            {isDeepWork ? (
+              <View style={[styles.deepBadge, { backgroundColor: palette.tint10, borderColor: palette.tint22 }]}>
+                <UIText variant="micro" color={palette.foregroundToken} style={styles.projectLabel}>
+                  🔥 DEEP WORK
+                </UIText>
+              </View>
+            ) : (
+              <UIText variant="micro" color={palette.foregroundToken} style={styles.projectLabel}>
+                TRACKING {project.name.toUpperCase()}
+              </UIText>
+            )}
           </View>
 
           <Animated.View style={[styles.timerBlock, timerStyle]}>
@@ -252,6 +285,12 @@ const styles = StyleSheet.create({
   projectLabel: {
     opacity: 0.7,
     letterSpacing: 1.2,
+  },
+  deepBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 99,
+    borderWidth: 1,
   },
   timerBlock: {
     flex: 1,

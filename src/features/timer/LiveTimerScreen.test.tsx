@@ -12,6 +12,13 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+const mockNotificationAsync = jest.fn().mockResolvedValue(undefined);
+jest.mock('expo-haptics', () => ({
+  __esModule: true,
+  notificationAsync: (...args: unknown[]) => mockNotificationAsync(...args),
+  NotificationFeedbackType: { Success: 'success' },
+}));
+
 const resetStore = () => useStore.setState({ ...initialState });
 
 const makeProject = (): Project => ({
@@ -36,6 +43,7 @@ beforeEach(() => {
 afterEach(() => {
   jest.useRealTimers();
   jest.clearAllMocks();
+  mockNotificationAsync.mockClear();
 });
 
 describe('LiveTimerScreen', () => {
@@ -194,6 +202,59 @@ describe('LiveTimerScreen', () => {
 
     const { getByLabelText } = render(<LiveTimerScreen project={project} />);
     expect(getByLabelText('Session note').props.value).toBe('prefilled');
+  });
+
+  it('swaps the TRACKING label for a DEEP WORK badge after 90 minutes', () => {
+    jest.setSystemTime(new Date('2026-04-13T11:31:00Z'));
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+    const started = useStore.getState().sessions[0];
+    useStore.setState({
+      sessions: [{ ...started, startedAt: new Date('2026-04-13T10:00:00Z').toISOString() }],
+    });
+
+    const { queryByText } = render(<LiveTimerScreen project={project} />);
+    expect(queryByText(/DEEP WORK/)).toBeTruthy();
+    expect(queryByText(/TRACKING/)).toBeNull();
+  });
+
+  it('fires a success haptic once when the 1h milestone is crossed', () => {
+    jest.setSystemTime(new Date('2026-04-13T11:00:01Z'));
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+    const started = useStore.getState().sessions[0];
+    useStore.setState({
+      sessions: [{ ...started, startedAt: new Date('2026-04-13T10:00:00Z').toISOString() }],
+    });
+
+    render(<LiveTimerScreen project={project} />);
+    expect(mockNotificationAsync).toHaveBeenCalledTimes(1);
+    expect(mockNotificationAsync).toHaveBeenCalledWith('success');
+  });
+
+  it('does not fire a haptic before any milestone is reached', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+
+    render(<LiveTimerScreen project={project} />);
+    expect(mockNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('fires haptics for both 1h and 2h when both have been crossed', () => {
+    jest.setSystemTime(new Date('2026-04-13T12:00:01Z'));
+    const project = makeProject();
+    useStore.setState({ projects: [project] });
+    useStore.getState().startSession(project.id);
+    const started = useStore.getState().sessions[0];
+    useStore.setState({
+      sessions: [{ ...started, startedAt: new Date('2026-04-13T10:00:00Z').toISOString() }],
+    });
+
+    render(<LiveTimerScreen project={project} />);
+    expect(mockNotificationAsync).toHaveBeenCalledTimes(2);
   });
 });
 
