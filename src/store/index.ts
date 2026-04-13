@@ -2,9 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { AppState, Project, ProjectColor, Session } from '../types';
+import {
+  DEFAULT_TEMPLATE_TASK_NAMES,
+  normalizeTaskName,
+  type AppState,
+  type Project,
+  type ProjectColor,
+  type Session,
+  type Task,
+} from '../types';
 
-const STORE_VERSION = 2;
+const STORE_VERSION = 3;
 
 interface Store extends AppState {
   startSession: (projectId: string, note?: string) => void;
@@ -27,6 +35,9 @@ interface Store extends AppState {
   updateProject: (id: string, updates: Partial<Project>) => void;
   archiveProject: (id: string) => void;
   setOnboardingDone: (done: boolean) => void;
+
+  createTask: (projectId: string | null, name: string, isTemplate?: boolean) => Task;
+  renameTask: (id: string, name: string) => void;
 
   getActiveProject: () => Project | null;
 }
@@ -73,9 +84,57 @@ const bumpProjectTotals = (
   };
 };
 
+const buildDefaultTemplateTasks = (): Task[] =>
+  DEFAULT_TEMPLATE_TASK_NAMES.map((name) => ({
+    id: newId('t'),
+    projectId: null,
+    name,
+    isTemplate: true,
+    createdAt: new Date().toISOString(),
+  }));
+
+export const migrateState = (persistedState: unknown, version: number): AppState => {
+  const state = persistedState as AppState & { sessions?: Partial<Session>[] };
+  if (version < 2) {
+    state.sessions = (state.sessions ?? []).map((s) => ({
+      ...(s as Session),
+      durationSeconds: (s as Session).durationSeconds ?? (s.durationMinutes ?? 0) * 60,
+    }));
+  }
+  if (version < 3) {
+    const tasks: Task[] = Array.isArray(state.tasks) ? [...state.tasks] : buildDefaultTemplateTasks();
+    if (tasks.length === 0) tasks.push(...buildDefaultTemplateTasks());
+    const sessionsIn: Session[] = (state.sessions ?? []) as Session[];
+    const migratedSessions: Session[] = sessionsIn.map((s) => {
+      if (s.taskId) return { ...s, taskId: s.taskId };
+      const raw = s.note ?? '';
+      const cleanName = raw.trim();
+      if (cleanName.length === 0) return { ...s, taskId: null };
+      const normalized = normalizeTaskName(cleanName);
+      const existing = tasks.find(
+        (t) => t.projectId === s.projectId && normalizeTaskName(t.name) === normalized,
+      );
+      if (existing) return { ...s, taskId: existing.id };
+      const newTask: Task = {
+        id: newId('t'),
+        projectId: s.projectId,
+        name: cleanName,
+        isTemplate: false,
+        createdAt: s.startedAt ?? new Date().toISOString(),
+      };
+      tasks.push(newTask);
+      return { ...s, taskId: newTask.id };
+    });
+    state.tasks = tasks;
+    state.sessions = migratedSessions;
+  }
+  return state as AppState;
+};
+
 export const initialState: AppState = {
   projects: [],
   sessions: [],
+  tasks: buildDefaultTemplateTasks(),
   activeSessionId: null,
   activePausedAt: null,
   activePausedAccumulatedMs: 0,
@@ -99,6 +158,7 @@ export const useStore = create<Store>()(
         const session: Session = {
           id: newId('s'),
           projectId,
+          taskId: null,
           startedAt: new Date().toISOString(),
           endedAt: null,
           durationMinutes: 0,
@@ -195,6 +255,7 @@ export const useStore = create<Store>()(
         const session: Session = {
           id: newId('s'),
           projectId,
+          taskId: null,
           startedAt: start.toISOString(),
           endedAt: end.toISOString(),
           durationMinutes: rounded,
@@ -234,6 +295,32 @@ export const useStore = create<Store>()(
       archiveProject: notImplemented('archiveProject'),
       setOnboardingDone: (done) => set({ onboardingDone: done }),
 
+      createTask: (projectId, name, isTemplate = false) => {
+        const cleanName = name.trim();
+        const normalized = normalizeTaskName(cleanName);
+        const existing = get().tasks.find(
+          (t) => t.projectId === projectId && normalizeTaskName(t.name) === normalized,
+        );
+        if (existing) return existing;
+        const task: Task = {
+          id: newId('t'),
+          projectId,
+          name: cleanName,
+          isTemplate,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({ tasks: [...state.tasks, task] }));
+        return task;
+      },
+
+      renameTask: (id, name) => {
+        const cleanName = name.trim();
+        if (cleanName.length === 0) return;
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, name: cleanName } : t)),
+        }));
+      },
+
       getActiveProject: () => {
         const { activeSessionId, sessions, projects } = get();
         if (!activeSessionId) return null;
@@ -249,22 +336,14 @@ export const useStore = create<Store>()(
       partialize: (state): AppState => ({
         projects: state.projects,
         sessions: state.sessions,
+        tasks: state.tasks,
         activeSessionId: state.activeSessionId,
         activePausedAt: state.activePausedAt,
         activePausedAccumulatedMs: state.activePausedAccumulatedMs,
         dailyGoalMinutes: state.dailyGoalMinutes,
         onboardingDone: state.onboardingDone,
       }),
-      migrate: (persistedState, version) => {
-        const state = persistedState as AppState & { sessions?: Partial<Session>[] };
-        if (version < 2) {
-          state.sessions = (state.sessions ?? []).map((s) => ({
-            ...(s as Session),
-            durationSeconds: (s as Session).durationSeconds ?? (s.durationMinutes ?? 0) * 60,
-          }));
-        }
-        return state as AppState;
-      },
+      migrate: (persistedState, version) => migrateState(persistedState, version),
     },
   ),
 );

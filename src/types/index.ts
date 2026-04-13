@@ -40,6 +40,7 @@ export interface Project {
 export interface Session {
   id: string;
   projectId: string;
+  taskId: string | null;
   startedAt: string;
   endedAt: string | null;
   durationMinutes: number;
@@ -49,9 +50,22 @@ export interface Session {
   isPast: boolean;
 }
 
+export interface Task {
+  id: string;
+  projectId: string | null;
+  name: string;
+  isTemplate: boolean;
+  createdAt: string;
+}
+
+export const normalizeTaskName = (name: string): string => name.trim().toLowerCase();
+
+export const DEFAULT_TEMPLATE_TASK_NAMES: readonly string[] = ['Bug fix', 'Feature', 'Meeting'];
+
 export interface AppState {
   projects: Project[];
   sessions: Session[];
+  tasks: Task[];
   activeSessionId: string | null;
   activePausedAt: string | null;
   activePausedAccumulatedMs: number;
