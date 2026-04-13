@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,7 +30,14 @@ const greetingFor = (d: Date): string => {
 const HomeScreen = () => {
   const dailyGoalMinutes = useStore((s) => s.dailyGoalMinutes);
   const sessionCount = useStore((s) => s.sessions.length);
-  const { todayMinutes, streak, timelineSessions, activeProjects, hasHistory } = useHomeData();
+  const {
+    todayMinutes,
+    streak,
+    timelineSessions,
+    timelineWindowMinutes,
+    activeProjects,
+    hasHistory,
+  } = useHomeData();
 
   useEffect(() => {
     if (__DEV__ && sessionCount === 0) {
@@ -42,7 +50,11 @@ const HomeScreen = () => {
   const hint = hasHistory ? undefined : "Let's get going →";
 
   const handleStart = useCallback((project: Project) => {
-    console.warn('Live timer — Phase 4 not yet wired', project.name);
+    const { activeSessionId, startSession } = useStore.getState();
+    if (!activeSessionId) {
+      startSession(project.id);
+    }
+    router.push('/timer');
   }, []);
 
   return (
@@ -65,7 +77,7 @@ const HomeScreen = () => {
             <UIText variant="micro" color="sub">
               TODAY&apos;S TIMELINE
             </UIText>
-            <Timeline sessions={timelineSessions} />
+            <Timeline sessions={timelineSessions} windowMinutes={timelineWindowMinutes} />
           </View>
         </Card>
 
