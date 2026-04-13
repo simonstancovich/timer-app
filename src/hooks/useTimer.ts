@@ -7,43 +7,43 @@ export type TimerState = {
   isPaused: boolean;
 };
 
-const computeElapsed = (
-  startedAtIso: string,
+const computeElapsedSeconds = (
+  startedAtIso: string | undefined,
   accumulatedPauseMs: number,
   activePausedAtIso: string | null,
-  now: number,
 ): number => {
+  if (!startedAtIso) return 0;
   const startMs = new Date(startedAtIso).getTime();
-  const extraPausedMs = activePausedAtIso
-    ? Math.max(0, now - new Date(activePausedAtIso).getTime())
-    : 0;
-  const pausedMs = accumulatedPauseMs + extraPausedMs;
-  return Math.max(0, Math.floor((now - startMs - pausedMs) / 1000));
+  const endMs = activePausedAtIso ? new Date(activePausedAtIso).getTime() : Date.now();
+  return Math.max(0, Math.floor((endMs - startMs - accumulatedPauseMs) / 1000));
 };
 
 export const useTimer = (): TimerState => {
-  const activeSessionId = useStore((s) => s.activeSessionId);
-  const activePausedAt = useStore((s) => s.activePausedAt);
-  const activePausedAccumulatedMs = useStore((s) => s.activePausedAccumulatedMs);
   const session = useStore((s) =>
     s.activeSessionId ? (s.sessions.find((x) => x.id === s.activeSessionId) ?? null) : null,
   );
+  const activePausedAt = useStore((s) => s.activePausedAt);
+  const activePausedAccumulatedMs = useStore((s) => s.activePausedAccumulatedMs);
 
   const isActive = !!session;
   const isPaused = !!activePausedAt;
+  const startedAt = session?.startedAt;
 
-  const [now, setNow] = useState<number>(() => Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState(() =>
+    computeElapsedSeconds(startedAt, activePausedAccumulatedMs, activePausedAt),
+  );
 
   useEffect(() => {
-    setNow(Date.now());
+    const tick = () => {
+      setElapsedSeconds(
+        computeElapsedSeconds(startedAt, activePausedAccumulatedMs, activePausedAt),
+      );
+    };
+    tick();
     if (!isActive || isPaused) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [isActive, isPaused, activeSessionId]);
-
-  const elapsedSeconds = session
-    ? computeElapsed(session.startedAt, activePausedAccumulatedMs, activePausedAt, now)
-    : 0;
+  }, [startedAt, activePausedAt, activePausedAccumulatedMs, isActive, isPaused]);
 
   return { elapsedSeconds, isActive, isPaused };
 };
