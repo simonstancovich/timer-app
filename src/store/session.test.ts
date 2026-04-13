@@ -20,7 +20,7 @@ describe('startSession', () => {
     const project = createTestProject();
     jest.setSystemTime(new Date('2026-04-13T10:00:00Z'));
 
-    useStore.getState().startSession(project.id, 'deposit flow');
+    useStore.getState().startSession(project.id, { note: 'deposit flow' });
 
     const { sessions, activeSessionId } = useStore.getState();
     expect(sessions).toHaveLength(1);
@@ -179,7 +179,7 @@ describe('stopSession', () => {
 
   it('updates project.lastNote when session note is non-empty', () => {
     const project = createTestProject();
-    useStore.getState().startSession(project.id, 'working on deposit flow');
+    useStore.getState().startSession(project.id, { note: 'working on deposit flow' });
     useStore.getState().stopSession();
     expect(useStore.getState().projects[0].lastNote).toBe('working on deposit flow');
   });
@@ -239,7 +239,7 @@ describe('addPastSession', () => {
   it('creates a completed session with isPast=true', () => {
     jest.setSystemTime(new Date('2026-04-15T10:00:00Z'));
     const project = createTestProject();
-    useStore.getState().addPastSession(project.id, 45, '2026-04-15T08:00:00.000Z', 'earlier work');
+    useStore.getState().addPastSession(project.id, 45, '2026-04-15T08:00:00.000Z', { note: 'earlier work' });
 
     const { sessions } = useStore.getState();
     expect(sessions).toHaveLength(1);

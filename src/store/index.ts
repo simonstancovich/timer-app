@@ -14,8 +14,12 @@ import {
 
 const STORE_VERSION = 3;
 
+type StartSessionOptions = { taskId?: string | null; note?: string };
+
+type AddPastSessionOptions = { taskId?: string | null; note?: string };
+
 interface Store extends AppState {
-  startSession: (projectId: string, note?: string) => void;
+  startSession: (projectId: string, options?: StartSessionOptions) => void;
   pauseSession: () => void;
   resumeSession: () => void;
   stopSession: () => Session | null;
@@ -24,7 +28,7 @@ interface Store extends AppState {
     projectId: string,
     durationMinutes: number,
     startedAt: string,
-    note?: string,
+    options?: AddPastSessionOptions,
   ) => void;
 
   createProject: (
@@ -93,6 +97,57 @@ const buildDefaultTemplateTasks = (): Task[] =>
     createdAt: new Date().toISOString(),
   }));
 
+type TaskStats = { count: number; lastStartedAt: number };
+
+const buildTaskStats = (sessions: Session[]): Map<string, TaskStats> => {
+  const stats = new Map<string, TaskStats>();
+  for (const s of sessions) {
+    if (!s.taskId) continue;
+    const started = new Date(s.startedAt).getTime();
+    const prev = stats.get(s.taskId);
+    if (prev) {
+      prev.count += 1;
+      if (started > prev.lastStartedAt) prev.lastStartedAt = started;
+    } else {
+      stats.set(s.taskId, { count: 1, lastStartedAt: started });
+    }
+  }
+  return stats;
+};
+
+export const selectProjectTasks = (state: AppState, projectId: string): Task[] => {
+  const projectTasks = state.tasks.filter((t) => t.projectId === projectId);
+  const stats = buildTaskStats(state.sessions);
+  return [...projectTasks].sort((a, b) => {
+    const sa = stats.get(a.id) ?? { count: 0, lastStartedAt: 0 };
+    const sb = stats.get(b.id) ?? { count: 0, lastStartedAt: 0 };
+    if (sb.count !== sa.count) return sb.count - sa.count;
+    if (sb.lastStartedAt !== sa.lastStartedAt) return sb.lastStartedAt - sa.lastStartedAt;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+};
+
+export const selectTemplateTasks = (state: AppState): Task[] =>
+  state.tasks.filter((t) => t.isTemplate);
+
+const todayIsoDate = (d: Date): string => d.toISOString().slice(0, 10);
+
+export const selectTaskPriorSecondsToday = (
+  state: AppState,
+  taskId: string,
+  now: Date = new Date(),
+): number => {
+  const today = todayIsoDate(now);
+  return state.sessions
+    .filter(
+      (s) =>
+        s.taskId === taskId &&
+        s.endedAt !== null &&
+        todayIsoDate(new Date(s.startedAt)) === today,
+    )
+    .reduce((sum, s) => sum + (s.durationSeconds ?? s.durationMinutes * 60), 0);
+};
+
 export const migrateState = (persistedState: unknown, version: number): AppState => {
   const state = persistedState as AppState & { sessions?: Partial<Session>[] };
   if (version < 2) {
@@ -151,19 +206,19 @@ export const useStore = create<Store>()(
     (set, get) => ({
       ...initialState,
 
-      startSession: (projectId, note) => {
+      startSession: (projectId, options) => {
         if (get().activeSessionId) {
           throw new Error('store.startSession: a session is already active');
         }
         const session: Session = {
           id: newId('s'),
           projectId,
-          taskId: null,
+          taskId: options?.taskId ?? null,
           startedAt: new Date().toISOString(),
           endedAt: null,
           durationMinutes: 0,
           durationSeconds: 0,
-          note: note ?? '',
+          note: options?.note ?? '',
           isDeep: false,
           isPast: false,
         };
@@ -248,19 +303,19 @@ export const useStore = create<Store>()(
         }));
       },
 
-      addPastSession: (projectId, durationMinutes, startedAt, note) => {
+      addPastSession: (projectId, durationMinutes, startedAt, options) => {
         const rounded = Math.max(0, Math.round(durationMinutes));
         const start = new Date(startedAt);
         const end = new Date(start.getTime() + rounded * 60000);
         const session: Session = {
           id: newId('s'),
           projectId,
-          taskId: null,
+          taskId: options?.taskId ?? null,
           startedAt: start.toISOString(),
           endedAt: end.toISOString(),
           durationMinutes: rounded,
           durationSeconds: rounded * 60,
-          note: note ?? '',
+          note: options?.note ?? '',
           isDeep: rounded >= DEEP_WORK_MINUTES,
           isPast: true,
         };
