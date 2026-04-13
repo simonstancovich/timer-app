@@ -144,7 +144,7 @@ const HomeScreen = () => {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const sampleTimelineSessions: TimelineSession[] = [
   { startMinuteOffset: 0, durationMinutes: 55, color: 'violet', label: 'Deep work' },
@@ -153,6 +153,5 @@ const sampleTimelineSessions: TimelineSession[] = [
   { startMinuteOffset: 220, durationMinutes: 25, color: 'amber', label: 'Errands' },
   { startMinuteOffset: 300, durationMinutes: 18, color: 'teal', label: 'In progress', isLive: true },
 ];
-};
 
 export default HomeScreen;
