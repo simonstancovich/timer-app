@@ -20,16 +20,16 @@ type UITextProps = Omit<TextProps, 'children'> & {
   children: ReactNode;
 };
 
-export function UIText({
+export const UIText = ({
   variant = 'body',
   color = 'ink',
   style,
   children,
   ...rest
-}: UITextProps) {
+}: UITextProps) => {
   return (
     <Text {...rest} style={[variantToStyle[variant], { color: colors[color] }, style]}>
       {children}
     </Text>
   );
-}
+};

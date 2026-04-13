@@ -51,6 +51,7 @@ If the staged diff isn't a 9/10 right now, **you fix it before you commit** — 
 ### Code style
 
 - **Default to ZERO comments.** Identifier names and types carry meaning. Don't narrate code. Don't add docstrings, header comments, section banners, or "// future X here" placeholders. The exception is genuinely non-obvious constraints (workarounds for external bugs, subtle invariants the code can't express), and even then keep it one short line. License headers / auto-generated markers are fine.
+- **Arrow-const components, never `function`.** Every component — public, internal sub-component, default-exported route — is declared as `const Foo = (props) => { ... }`. Never `function Foo() {}` or `export default function Foo() {}`. Applies to components only; non-component helpers can stay as `function` declarations.
 - **Strict TypeScript.** Avoid `any`. Prefer `satisfies` over `as`. Annotate return types when it catches drift.
 - **No emojis in code, commits, or PRs** unless I ask. UI strings can have emojis where the design calls for them.
 

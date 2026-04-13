@@ -11,7 +11,7 @@ import { UIText } from '../../src/components/primitives/UIText';
 import { colors } from '../../src/tokens/colors';
 import { spacing } from '../../src/tokens/spacing';
 
-export default function HomeScreen() {
+const HomeScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: spacing.screenPadH, gap: spacing.xxl }}>
@@ -153,3 +153,6 @@ const sampleTimelineSessions: TimelineSession[] = [
   { startMinuteOffset: 220, durationMinutes: 25, color: 'amber', label: 'Errands' },
   { startMinuteOffset: 300, durationMinutes: 18, color: 'teal', label: 'In progress', isLive: true },
 ];
+};
+
+export default HomeScreen;
