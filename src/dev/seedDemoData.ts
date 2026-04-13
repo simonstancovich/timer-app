@@ -66,6 +66,7 @@ export const seedDemoData = () => {
       note: 'Deposit flow wiring',
       isDeep: false,
       isPast: false,
+      taskId: null,
     },
     {
       id: newId('s'),
@@ -77,6 +78,7 @@ export const seedDemoData = () => {
       note: 'Outline edits',
       isDeep: false,
       isPast: false,
+      taskId: null,
     },
     {
       id: newId('s'),
@@ -88,6 +90,7 @@ export const seedDemoData = () => {
       note: 'Pairing with backend',
       isDeep: true,
       isPast: false,
+      taskId: null,
     },
     {
       id: newId('s'),
@@ -99,6 +102,7 @@ export const seedDemoData = () => {
       note: '',
       isDeep: true,
       isPast: false,
+      taskId: null,
     },
     {
       id: newId('s'),
@@ -110,6 +114,7 @@ export const seedDemoData = () => {
       note: '',
       isDeep: false,
       isPast: false,
+      taskId: null,
     },
   ];
 
