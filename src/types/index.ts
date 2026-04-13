@@ -52,6 +52,8 @@ export interface AppState {
   projects: Project[];
   sessions: Session[];
   activeSessionId: string | null;
+  activePausedAt: string | null;
+  activePausedAccumulatedMs: number;
   dailyGoalMinutes: number;
   onboardingDone: boolean;
 }
