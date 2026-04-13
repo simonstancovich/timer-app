@@ -262,6 +262,5 @@ Spacing — `src/tokens/spacing.ts`: `xs` 4, `sm` 8, `md` 12, `lg` 16, `xl` 20, 
 - Replace temporary sandbox in `app/(tabs)/index.tsx` with onboarding + real Home
 - Full-bleed designed splash screen ("Arc / Your day. Your arc.") — current splash is centered icon only because Expo's plugin doesn't support full-bleed; would need manual `LaunchScreen.storyboard` edit
 - Dark mode visuals across screens
-- App Store Connect submission compliance: in-app encryption answer is "None of the above" → set permanently via `app.json` `ios.config.usesNonExemptEncryption: false`
 - Set up Push Notifications in EAS once milestone notifications are wired
 - Extract `flattenStyle` test helper into `src/test-utils/` once it's used in 5+ test files (currently 7 — overdue)
