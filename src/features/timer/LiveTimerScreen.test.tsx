@@ -13,10 +13,13 @@ jest.mock('expo-status-bar', () => ({
 }));
 
 const mockNotificationAsync = jest.fn().mockResolvedValue(undefined);
+const mockImpactAsync = jest.fn().mockResolvedValue(undefined);
 jest.mock('expo-haptics', () => ({
   __esModule: true,
   notificationAsync: (...args: unknown[]) => mockNotificationAsync(...args),
+  impactAsync: (...args: unknown[]) => mockImpactAsync(...args),
   NotificationFeedbackType: { Success: 'success' },
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
 }));
 
 const resetStore = () => useStore.setState({ ...initialState });
@@ -241,6 +244,55 @@ describe('LiveTimerScreen', () => {
 
     render(<LiveTimerScreen project={project} />);
     expect(mockNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('selecting a project task bubble updates taskId and note', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project], tasks: [] });
+    const task = useStore.getState().createTask(project.id, 'Deposit flow');
+    useStore.getState().startSession(project.id);
+
+    const { getByLabelText } = render(<LiveTimerScreen project={project} />);
+    fireEvent.press(getByLabelText('Deposit flow'));
+
+    const session = useStore.getState().sessions[0];
+    expect(session.taskId).toBe(task.id);
+    expect(session.note).toBe('Deposit flow');
+  });
+
+  it('selecting a template creates a project task with that name and selects it', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project], tasks: [] });
+    useStore.getState().createTask(null, 'Bug fix', true);
+    useStore.getState().startSession(project.id);
+
+    const { getByLabelText } = render(<LiveTimerScreen project={project} />);
+    fireEvent.press(getByLabelText('Bug fix'));
+
+    const { tasks, sessions } = useStore.getState();
+    const projectTask = tasks.find((t) => t.projectId === project.id && t.name === 'Bug fix');
+    expect(projectTask).toBeDefined();
+    expect(sessions[0].taskId).toBe(projectTask!.id);
+    expect(sessions[0].note).toBe('Bug fix');
+  });
+
+  it('submitting the note input (Enter) creates a task and assigns it', () => {
+    const project = makeProject();
+    useStore.setState({ projects: [project], tasks: [] });
+    useStore.getState().startSession(project.id);
+
+    const { getByLabelText } = render(<LiveTimerScreen project={project} />);
+    const input = getByLabelText('Session note');
+    fireEvent.changeText(input, '  Bug fix: mobile menu  ');
+    fireEvent(input, 'submitEditing');
+
+    const { tasks, sessions } = useStore.getState();
+    const created = tasks.find(
+      (t) => t.projectId === project.id && t.name === 'Bug fix: mobile menu',
+    );
+    expect(created).toBeDefined();
+    expect(sessions[0].taskId).toBe(created!.id);
+    expect(sessions[0].note).toBe('Bug fix: mobile menu');
   });
 
   it('fires haptics for both 1h and 2h when both have been crossed', () => {

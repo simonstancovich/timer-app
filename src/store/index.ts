@@ -24,6 +24,7 @@ interface Store extends AppState {
   resumeSession: () => void;
   stopSession: () => Session | null;
   updateActiveSessionNote: (note: string) => void;
+  updateActiveSession: (patch: Partial<Pick<Session, 'taskId' | 'note'>>) => void;
   addPastSession: (
     projectId: string,
     durationMinutes: number,
@@ -299,6 +300,16 @@ export const useStore = create<Store>()(
         set((state) => ({
           sessions: state.sessions.map((s) =>
             s.id === activeSessionId ? { ...s, note } : s,
+          ),
+        }));
+      },
+
+      updateActiveSession: (patch) => {
+        const { activeSessionId } = get();
+        if (!activeSessionId) return;
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === activeSessionId ? { ...s, ...patch } : s,
           ),
         }));
       },
