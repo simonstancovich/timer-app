@@ -1,4 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { initialState, useStore } from '../../store';
 import type { Task } from '../../types';
 import { TaskBubbles } from './TaskBubbles';
@@ -138,11 +140,11 @@ describe('TaskBubbles', () => {
     expect(getBubbleOrder()).toEqual([a.name, b.name, c.name]);
   });
 
-  it('long-pressing a template enters edit mode and rename commits on submit', () => {
+  it('long-pressing a template shakes first, then enters edit mode; rename commits on submit', () => {
     const project = makeProject();
     const template = useStore.getState().createTask(null, 'Bug fix', true);
 
-    const { getByLabelText } = render(
+    const { getByLabelText, queryByLabelText } = render(
       <TaskBubbles
         projectId={project.id}
         activeTaskId={null}
@@ -150,8 +152,16 @@ describe('TaskBubbles', () => {
         onSelectTask={jest.fn()}
       />,
     );
-    const bubble = getByLabelText('Bug fix');
-    fireEvent(bubble, 'longPress');
+
+    expect(queryByLabelText('Edit Bug fix')).toBeNull();
+
+    act(() => {
+      fireGestureHandler(getByGestureTestId(`longpress-${template.id}`), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+      ]);
+      jest.advanceTimersByTime(600);
+    });
 
     const input = getByLabelText('Edit Bug fix');
     fireEvent.changeText(input, 'Bugfix');
@@ -165,7 +175,7 @@ describe('TaskBubbles', () => {
     const project = makeProject();
     const task = useStore.getState().createTask(project.id, 'Deposit flow');
 
-    const { getByLabelText, queryByLabelText } = render(
+    const { queryByLabelText } = render(
       <TaskBubbles
         projectId={project.id}
         activeTaskId={null}
@@ -173,7 +183,13 @@ describe('TaskBubbles', () => {
         onSelectTask={jest.fn()}
       />,
     );
-    fireEvent(getByLabelText('Deposit flow'), 'longPress');
+    act(() => {
+      fireGestureHandler(getByGestureTestId(`longpress-${task.id}`), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+      ]);
+      jest.advanceTimersByTime(600);
+    });
     expect(queryByLabelText('Edit Deposit flow')).toBeNull();
     expect(useStore.getState().tasks.find((t) => t.id === task.id)?.name).toBe('Deposit flow');
   });
