@@ -204,7 +204,8 @@ docs/spec.md                   # Full design + interaction spec (single source o
 | 1. Core primitives (`MonoText`, `UIText`, `Pill`, `Card`, `ProgressBar`, `Sparkline`, `GradientText`, `Timeline`) | ✅ Done | All 8 shipped in PRs #4–#6 + #12, plus #13 refactor to arrow-const. |
 | 2. Onboarding (welcome + setup screens) | ✅ Done | Welcome #15 (letter-stagger color-pop), Setup #16 (infinite color scroll + scheme-aware UI), onboarding gate #17 (redirect on fresh install). |
 | 3. Home idle (replaces sandbox) | ✅ Done | Shipped in #18: Header + TodayCard + Timeline card + Project cards + auto-seed dev data. |
-| 4. Live timer (full-screen color takeover, marquee feature) | ⏳ Next | Tap a project's play button → full-screen color takeover, breathing timer, milestone haptics, note input. Wires up `store.startSession` / `stopSession` / `pauseSession` / `resumeSession`. |
+| 4. Live timer (full-screen color takeover, marquee feature) | ✅ Done | Color takeover + breathing 82px timer + pause/resume + Stop & save (#22, #25), note input (#25), WCAG-contrast palette selection (#25), `durationSeconds` precision + store v2→v3 migration (#25), 1h/2h milestone haptics + pulse + 90min Deep Work badge (#26). Play handler on Home resumes paused + navigates. |
+| 4.5. Task bubbles (in progress) | ⏳ In progress | Per-project named task suggestions below the note input. See **Task bubbles feature** section below. |
 | 5. Celebration + Projects + Stats | ⏳ Pending | Post-session celebration screen, projects list view, stats tab. |
 | 6. Dynamic Island (Swift widget extension, ActivityKit, RN bridge) | ⏳ Pending | Requires real iPhone iOS 16.1+. |
 | 7. Polish (notifications, accessibility, app icon, splash, TestFlight) | ⏳ Partly done | TestFlight pipeline live + submitting successfully as of #19 (ASC export-compliance flag set); icon shipped; basic centered splash shipped. |
@@ -214,12 +215,88 @@ docs/spec.md                   # Full design + interaction spec (single source o
 ## Current state
 
 - **Active branch for new work:** cut fresh from `main`.
-- **Last merged PR:** #18 — Home idle.
-- **Last open PR:** #19 — ASC export-compliance hotfix. Merge before the next push to `main` or TestFlight auto-submit will fail again.
-- **Next up:** Phase 4 — Live Timer (spec §7 Screen 04 and onward).
-- **Store actions still stubbed** (throw `notImplemented`): `startSession`, `pauseSession`, `resumeSession`, `stopSession`, `addPastSession`, `updateProject`, `archiveProject`. Phase 4 will implement the session lifecycle quartet.
-- **Play button on ProjectCard** currently `console.warn`s; Phase 4 will wire it to `/timer` or similar route with the project as a query param.
-- **`sampleTimelineSessions` sandbox** is gone; Home now reads real sessions from the store. Dev seeding auto-fires on first dev launch when `sessions.length === 0` — see `src/dev/seedDemoData.ts`.
+- **Last merged PRs:** #28 (task data model), #29 (task-aware sessions + selectors). Phase 4 live timer (#22/#25/#26) fully landed on `main`.
+- **Next up:** Task bubbles feature — see below. PR 3 of that feature is the UI layer (bubble row on live timer).
+- **Store actions still stubbed** (throw `notImplemented`): `updateProject`, `archiveProject`. No screen needs them yet.
+
+---
+
+## Task bubbles feature (Phase 4.5)
+
+User-facing goal: under the live timer's note input, show a row of tappable pill-shaped "task bubbles" — the user's recent tasks for the current project (ranked by usage + recency) plus three always-present global templates (**Bug fix**, **Feature**, **Meeting**) that the user can rename via long-press. Tapping a bubble switches the active session to that task; typing in the note and pressing Enter creates a brand-new task and assigns it.
+
+### Decisions already locked in (don't re-ask)
+
+1. **3 default global templates:** `Bug fix`, `Feature`, `Meeting` (seeded on first launch, `projectId: null`, `isTemplate: true`). Renaming a template is a global rename — the user can customize them for their workflow.
+2. **Task dedup** is **case-insensitive + whitespace-trimmed**. `"Bug fix"` and `"  bug fix  "` are the same task.
+3. **Live timer displays per-task cumulative today** (not per-project). Tapping play on Home preselects the project's most recent task (PR 4); if no prior task, it starts at 0 with no task.
+4. **Long-press on a template** → inline rename with a playful shake/grow/pop animation (no modal). Submit/blur commits via `renameTask`.
+5. **Enter on the note input** → if the trimmed text doesn't match an existing task, immediately `createTask` on the current project and assign it (via the same `createTask` dedup path).
+6. **Order is stable within a screen mount.** Newly-used tasks don't visually jump to the front — re-ranking only applies when the screen is dismissed and re-entered. New tasks created in-session append at the end of the row.
+7. **Wrap, don't scroll.** The row uses flex-wrap (left → right → down). Cap at **20 bubbles**. No horizontal scroll.
+8. **Press animations** should **pop/burst** — squish then explode/fade on tap, with a visible shockwave ring and medium haptic. Long-press = bigger shake + heavy haptic + enters edit mode with a scale-up.
+
+### Data model (already on main — PR #28)
+
+- `Task { id, projectId: string | null, name, isTemplate, createdAt }` — `projectId: null` means global template.
+- `Session.taskId: string | null` — sessions may or may not be tied to a task.
+- `normalizeTaskName(name)` — trim + lowercase. Used for dedup.
+- Store v3 migration: for every pre-existing session with a non-empty `note`, creates a `Task` (deduped per `projectId + normalized name`) and links `session.taskId`.
+- `initialState.tasks` seeds the 3 templates on fresh installs.
+
+### Store API (already on main — PR #28 + #29)
+
+```ts
+createTask(projectId: string | null, name: string, isTemplate?: boolean): Task
+renameTask(id: string, name: string): void
+
+startSession(projectId, { taskId?, note? }): void
+addPastSession(projectId, durationMinutes, startedAt, { taskId?, note? }): void
+
+// Pure exported selectors:
+selectProjectTasks(state, projectId): Task[]       // ranked by session count desc, then recency desc
+selectTemplateTasks(state): Task[]                  // global templates only
+selectTaskPriorSecondsToday(state, taskId, now?): number  // for per-task cumulative display
+```
+
+### PR split — where we are
+
+| PR | What | Status |
+|---|---|---|
+| **PR 1** — data model + migration | `Task` type, `Session.taskId`, `createTask` / `renameTask`, v2→v3 migration, 3 seeded templates | ✅ Merged (#28) |
+| **PR 2** — task-aware lifecycle + selectors | `startSession` / `addPastSession` options object; `selectProjectTasks` / `selectTemplateTasks` / `selectTaskPriorSecondsToday` | ✅ Merged (#29) |
+| **PR 3** — bubble UI on live timer | `TaskBubbles` row below note input, tap-to-select, template long-press rename (inline), Enter-to-create, pop/burst animation, stable order during mount | ⏳ Not yet open on main |
+| **PR 4** — per-task cumulative + Home preselects latest | On Home's play tap, preselect the project's most-recent-used task. Live screen swaps its "per-project today" display for **per-task today** using `selectTaskPriorSecondsToday`. | ⏳ Pending |
+| **PR 5** — "Continue previous session today?" prompt | When the user taps a bubble whose task already has sessions earlier today for this project, show a confirm before the per-task cumulative is surfaced (vs starting "fresh" at 0 for display purposes). Native Alert is fine for v1. | ⏳ Pending |
+| **PR 6+** — cross-project pattern detection (defer), per-task totals on project overview (separate screen) | — | ⏳ Deferred |
+
+### PR 3 implementation notes (so the next Claude picks up cleanly)
+
+- **Component to create:** `src/features/timer/TaskBubbles.tsx` + sibling `.test.tsx`.
+- **Data source:** `useStore(useShallow((s) => selectProjectTasks(s, projectId)))` and `useStore(useShallow((s) => selectTemplateTasks(s)))`. **Always use `useShallow`** — `.sort()` returns fresh array refs and without the shallow comparator, zustand triggers infinite re-renders.
+- **Layout:** place the bubble row in `LiveTimerScreen.tsx` **directly under the note input**. Flex-wrap row (no horizontal scroll); `overflow: 'visible'` so burst animations aren't clipped.
+- **Stable in-mount order:** snapshot the id order in a `useRef<string[]>` on first render. On subsequent renders, keep existing ids in order and append any new ids at the end. Cap at 20.
+- **Template dedup rule:** drop templates whose normalized name matches an existing project-scoped task (avoids showing the same label twice).
+- **Selection handler:**
+  - Tap a project-scoped task → `updateActiveSession({ taskId: task.id, note: task.name })`.
+  - Tap a template → `createTask(project.id, template.name)` (idempotent — returns existing if one exists with same normalized name), then `updateActiveSession({ taskId: newOrFound.id, note: template.name })`.
+- **Atomic patch store action to add:** `updateActiveSession(patch: Partial<Pick<Session, 'taskId' | 'note'>>)` — merges onto the currently active session in a single setState (so the bubble tap doesn't double-render). Sits next to `updateActiveSessionNote`.
+- **Note input on Enter:** `onSubmitEditing` → `createTask(project.id, trimmed)` + `updateActiveSession({ taskId, note: trimmed })`. `returnKeyType="done"`.
+- **Long-press on template only:** non-template bubbles ignore long-press. Enters inline edit mode (TextInput replaces the label, auto-focus ~140ms delay for the scale/shake to finish). Submit/blur → `renameTask(id, trimmed)` then exit edit mode.
+- **Animations (Reanimated):**
+  - **Tap burst:** scale `1 → 0.8 → 1.35` with opacity fade to 0 at peak, then respawn at scale `0.6` (still invisible) and spring back to `1` with opacity fading back in. Rotation wiggle `-6° → +6° → 0°`. A sibling absolutely-positioned ring with `borderWidth: 2` scales to `~2.3×` and fades out 0.9 → 0 over 380ms. `Haptics.impactAsync(Medium)`.
+  - **Long-press entering edit:** scale spring to `1.14`, rotation shake `-9° → +9° → -6° → +6° → 0°`, `Haptics.impactAsync(Heavy)` + shockwave.
+  - **Race guards:** use `editingRef` + `longPressedRef` — React's async `setState` means handlers running in sequence (longPress → onPress) can step on each other otherwise.
+- **Palette awareness:** accept a `tone: 'light' | 'dark'` prop from `LiveTimerScreen` and pick white-on-dark vs black-on-light tints (same policy as the rest of the screen — see WCAG-contrast palette in `LiveTimerScreen.tsx`).
+- **Mocks for tests:** `expo-haptics` needs mocking in test files that render bubbles. The `jest.mock` factory can't close over out-of-scope vars unless prefixed with `mock` (e.g. `mockImpactAsync`). Pattern used for `notificationAsync` in `LiveTimerScreen.test.tsx` is the template.
+- **Suggested tests (PR 3):** render order (project then deduped templates), press calls `onSelectTask`, active task gets `accessibilityState.selected`, stable-order ref keeps position when a session bumps rank, long-press on template enters edit mode and renames on submit, long-press on non-template is a no-op, LiveTimerScreen end-to-end (project-task tap, template tap creates project task, Enter on note creates task).
+
+### User's workflow preferences (don't break these)
+
+- Small PRs. Each PR in the list above is one PR, not a bundle.
+- Every PR has tests before it lands. The project currently runs **154+ Jest tests** across primitives, hooks, store, and feature screens.
+- No comments in code by default. Typed token props, flat tokens, no escape hatches (see "How I want you to work" at the top of this file).
+- Animations must feel playful and physical — be willing to turn up the drama on scale/rotation if a first pass feels subtle.
 
 ---
 
